@@ -19,26 +19,24 @@ def home():
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
-TRADE_PAIR = "XAUUSDT"    # Agar ye inactive bolega toh active list se mil jayega
+TRADE_PAIR = "B-XAU_USDT" # Updated format based on API specs
 TRADE_SIZE = 1000          
 TRADE_LEVERAGE = 4        
 TRADE_SIDE = "buy"        
 # =====================================================================
 
 BASE_URL = "https://api.coindcx.com"
-PUBLIC_URL = "https://public.coindcx.com"
 
 def get_active_instruments():
     try:
-        url = BASE_URL + "/exchange/v1/derivatives/futures/data/active_instruments"
+        url = BASE_URL + "/exchange/v1/derivatives/futures/data/active_instruments?margin_currency_short_name[]=usdt"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             instruments = response.json()
-            print("📋 Fetching active instruments list...", flush=True)
+            print("📋 Active USDT Instruments List:", flush=True)
             for inst in instruments:
-                # Print available instruments to check the exact symbol/pair name
                 if "XAU" in str(inst).upper() or "BTC" in str(inst).upper():
-                    print(f"   - Instrument: {inst}", flush=True)
+                    print(f"   -> {inst}", flush=True)
     except Exception as e:
         print(f"❌ Error fetching instruments: {e}", flush=True)
 
@@ -81,7 +79,6 @@ def place_futures_order(pair, side, total_quantity, leverage):
 def bot_loop():
     time.sleep(3)
     get_active_instruments()
-    # Order execution
     place_futures_order(pair=TRADE_PAIR, side=TRADE_SIDE, total_quantity=TRADE_SIZE, leverage=TRADE_LEVERAGE)
     
     while True:
