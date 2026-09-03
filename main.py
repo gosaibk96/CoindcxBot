@@ -11,13 +11,13 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX Futures Supertrend Bot is Live!"
+    return "CoinDCX Futures Wallet Bot is Live!"
 
 # =====================================================================
 # ⚙️ COINDCX API CONFIGURATION & CREDS
 # =====================================================================
-API_KEY = "91bfc0639dea44d72c21aa63825d5baede1f38258d06a858"
-API_SECRET = "d781e494887c9000273f2604225f84ce6c01822aae54be578963f5af99df00ee"
+API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
+API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
 BASE_URL = "https://api.coindcx.com"
 PUBLIC_URL = "https://public.coindcx.com"
@@ -40,10 +40,9 @@ def fetch_live_prices():
     except Exception as e:
         print(f"❌ Error fetching prices: {e}", flush=True)
 
-def check_futures_balance():
+def check_futures_wallet():
     time.sleep(3)
-    # Corrected Futures balance endpoint path for CoinDCX derivatives/futures
-    path = "/exchange/v1/derivatives/balances"
+    path = "/exchange/v1/derivatives/futures/wallets"
     url = BASE_URL + path
     
     body = {
@@ -60,19 +59,16 @@ def check_futures_balance():
     }
     
     try:
-        response = requests.post(url, data=json_body, headers=headers, timeout=5)
-        if response.status_code == 200:
-            balances = response.json()
-            print("💰 Futures Wallet Balances:", flush=True)
-            print(f"   - Response: {balances}", flush=True)
-        else:
-            print(f"Futures Balance Error Status: {response.status_code}, Body: {response.text}", flush=True)
+        # Documentation ke mutabiq GET request with data/body
+        response = requests.get(url, data=json_body, headers=headers, timeout=5)
+        print(f"Response Status: {response.status_code}", flush=True)
+        print(f"Response Body: {response.text}", flush=True)
     except Exception as e:
-        print(f"❌ Error checking futures balance: {e}", flush=True)
+        print(f"❌ Error checking futures wallet: {e}", flush=True)
 
 def bot_loop():
     while True:
-        check_futures_balance()
+        check_futures_wallet()
         fetch_live_prices()
         print("-" * 40, flush=True)
         time.sleep(60)
