@@ -21,7 +21,7 @@ API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
 TRADE_PAIR = "B-XAU_USDT" # Updated format based on API specs
 TRADE_SIZE = 1000          
-TRADE_LEVERAGE = 4        
+TRADE_LEVERAGE = 10        
 TRADE_SIDE = "buy"        
 # =====================================================================
 
