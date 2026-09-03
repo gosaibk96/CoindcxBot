@@ -50,7 +50,8 @@ def place_futures_order(pair, side, size_in_inr, leverage):
     if not price or price <= 0:
         price = 4428.0
 
-    calculated_quantity = round(size_in_inr / price, 4)
+    # Rounded to 3 decimal places to satisfy "divisible by 0.001" requirement
+    calculated_quantity = round(size_in_inr / price, 3)
     if calculated_quantity <= 0:
         calculated_quantity = 0.001
         
@@ -59,7 +60,6 @@ def place_futures_order(pair, side, size_in_inr, leverage):
     path = "/exchange/v1/derivatives/futures/orders/create"
     url = BASE_URL + path
     
-    # Body as per official CoinDCX documentation screenshots
     body = {
         "timestamp": int(round(time.time() * 1000)),
         "order": {
@@ -68,11 +68,10 @@ def place_futures_order(pair, side, size_in_inr, leverage):
             "order_type": "market_order",
             "total_quantity": calculated_quantity,
             "leverage": leverage,
-            "margin_currency_short_name": "INR", # 🔥 Enables INR Margin Mode
+            "margin_currency_short_name": "INR", 
             "notification": "email_notification",
             "hidden": False,
             "post_only": False
-            # Note: time_in_force is intentionally removed for market orders as per docs
         }
     }
     
@@ -86,7 +85,7 @@ def place_futures_order(pair, side, size_in_inr, leverage):
     }
     
     try:
-        print(f"🚀 Placing Futures Market Order for {pair} ({side.upper_() if hasattr(side, 'upper_') else side.upper()})...", flush=True)
+        print(f"🚀 Placing Futures Market Order for {pair} ({side.upper()})...", flush=True)
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
         print(f"📦 Order Response Status: {response.status_code}", flush=True)
         print(f"📦 Order Response Body: {response.text}", flush=True)
