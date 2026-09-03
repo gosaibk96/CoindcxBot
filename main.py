@@ -16,8 +16,8 @@ def home():
 # =====================================================================
 # ⚙️ COINDCX API CONFIGURATION & CREDS
 # =====================================================================
-API_KEY = "91bfc0639dea44d72c21aa63825d5baede1f38258d06a858"
-API_SECRET = "d781e494887c9000273f2604225f84ce6c01822aae54be578963f5af99df00ee"
+API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
+API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
 BASE_URL = "https://api.coindcx.com"
 PUBLIC_URL = "https://public.coindcx.com"
@@ -42,8 +42,8 @@ def fetch_live_prices():
 
 def check_futures_balance():
     time.sleep(3)
-    # Futures wallet balance endpoint
-    path = "/exchange/v1/users/futures_balances"
+    # Corrected Futures balance endpoint path for CoinDCX derivatives/futures
+    path = "/exchange/v1/derivatives/balances"
     url = BASE_URL + path
     
     body = {
@@ -64,12 +64,7 @@ def check_futures_balance():
         if response.status_code == 200:
             balances = response.json()
             print("💰 Futures Wallet Balances:", flush=True)
-            # Agar response list hai ya dictionary, uske anusaar handle karenge
-            if isinstance(balances, list):
-                for b in balances:
-                    print(f"   - {b.get('currency', 'USD')}: Balance = {b.get('balance', 0)}, Margin Balance = {b.get('margin_balance', 0)}", flush=True)
-            else:
-                print(f"   - Response: {balances}", flush=True)
+            print(f"   - Response: {balances}", flush=True)
         else:
             print(f"Futures Balance Error Status: {response.status_code}, Body: {response.text}", flush=True)
     except Exception as e:
@@ -80,7 +75,7 @@ def bot_loop():
         check_futures_balance()
         fetch_live_prices()
         print("-" * 40, flush=True)
-        time.sleep(60) # Har 1 minute mein update dikhayega
+        time.sleep(60)
 
 if __name__ == "__main__":
     threading.Thread(target=bot_loop).start()
