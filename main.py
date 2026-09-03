@@ -16,8 +16,8 @@ def home():
 # =====================================================================
 # ⚙️ COINDCX API CONFIGURATION & CREDS
 # =====================================================================
-API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
-API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
+API_KEY = "91bfc0639dea44d72c21aa63825d5baede1f38258d06a858"
+API_SECRET = "d781e494887c9000273f2604225f84ce6c01822aae54be578963f5af99df00ee"
 
 BASE_URL = "https://api.coindcx.com"
 PUBLIC_URL = "https://public.coindcx.com"
