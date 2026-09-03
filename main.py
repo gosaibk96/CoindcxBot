@@ -14,29 +14,31 @@ def home():
     return "CoinDCX Connection Test is Live!"
 
 # =====================================================================
-# ⚙️ APNI NAYI BINA IP-RESTRICTION WALI COINDCX KEYS YAHAN DALIN
+# ⚙️ APNI NAYI COINDCX KEYS YAHAN DALIN
 # =====================================================================
 API_KEY = "91bfc0639dea44d72c21aa63825d5baede1f38258d06a858"
 API_SECRET = "d781e494887c9000273f2604225f84ce6c01822aae54be578963f5af99df00ee"
 
 BASE_URL = "https://api.coindcx.com"
 
-def generate_coindcx_signature(secret_key, body_dict):
-    secret_bytes = bytes(secret_key, encoding='utf-8')
-    body_json = json.dumps(body_dict, separators=(',', ':'))
-    signature = hmac.new(secret_bytes, body_json.encode('utf-8'), hashlib.sha256).hexdigest()
-    return signature
-
 def check_balance():
     time.sleep(3)
     path = "/exchange/v1/users/balances"
     url = BASE_URL + path
     
+    # Body with timestamp
     body = {
         "timestamp": int(round(time.time() * 1000))
     }
     
-    signature = generate_coindcx_signature(API_SECRET, body)
+    # Exact JSON formatting for CoinDCX HMAC signature
+    json_body = json.dumps(body, separators=(',', ':'))
+    
+    signature = hmac.new(
+        API_SECRET.encode('utf-8'),
+        json_body.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
     
     headers = {
         'Content-Type': 'application/json',
@@ -45,8 +47,8 @@ def check_balance():
     }
     
     try:
-        print("🔍 Checking CoinDCX Connection with New Key...", flush=True)
-        response = requests.post(url, data=json.dumps(body), headers=headers, timeout=5)
+        print("🔍 Checking CoinDCX Connection with Updated Signature...", flush=True)
+        response = requests.post(url, data=json_body, headers=headers, timeout=5)
         print(f"Response Status: {response.status_code}", flush=True)
         print(f"Response Body: {response.text}", flush=True)
     except Exception as e:
