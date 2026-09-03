@@ -4,6 +4,7 @@ import hashlib
 import requests
 import json
 import os
+import threading
 from flask import Flask
 
 app = Flask(__name__)
@@ -28,6 +29,7 @@ def generate_coindcx_signature(secret_key, body_dict):
     return signature
 
 def check_balance():
+    time.sleep(2)  # Wait for server to stabilize
     path = "/exchange/v1/users/balances"
     url = BASE_URL + path
     
@@ -44,6 +46,7 @@ def check_balance():
     }
     
     try:
+        print("🔍 Checking CoinDCX Balance...", flush=True)
         response = requests.post(url, data=json.dumps(body), headers=headers, timeout=5)
         print("Response Status:", response.status_code, flush=True)
         print("Response Body:", response.text, flush=True)
@@ -51,6 +54,8 @@ def check_balance():
         print(f"❌ Error checking balance: {e}", flush=True)
 
 if __name__ == "__main__":
-    check_balance()
+    # Run balance check in a separate background thread
+    threading.Thread(target=check_balance).start()
+    
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
