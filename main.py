@@ -20,43 +20,14 @@ API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
 TRADE_PAIR = "B-XAU_USDT" 
-DESIRED_INR_SIZE = 1000    # Aapka INR investment size
+TRADE_QUANTITY = 0.002    # Fixed quantity in XAU
 TRADE_LEVERAGE = 10       
 TRADE_SIDE = "buy"        # "buy" ya "sell"
 # =====================================================================
 
 BASE_URL = "https://api.coindcx.com"
 
-def get_live_price(pair):
-    try:
-        url = "https://public.coindcx.com/exchange/ticker"
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            tickers = response.json()
-            for ticker in tickers:
-                market_val = ticker.get('market') or ticker.get('symbol')
-                if market_val and pair.upper() in str(market_val).upper():
-                    price = ticker.get('last_price') or ticker.get('price')
-                    if price:
-                        return float(price)
-    except Exception as e:
-        print(f"❌ Error fetching price: {e}", flush=True)
-    return 4428.0 # Fallback price
-
-def place_futures_order(pair, side, size_in_inr, leverage):
-    print(f"🔍 Fetching live market price for {pair}...", flush=True)
-    price = get_live_price(pair)
-    
-    if not price or price <= 0:
-        price = 4428.0
-
-    # Rounded to 3 decimal places to satisfy "divisible by 0.001" requirement
-    calculated_quantity = round(size_in_inr / price, 3)
-    if calculated_quantity <= 0:
-        calculated_quantity = 0.001
-        
-    print(f"📊 Live Price: {price} | Calculated Quantity: {calculated_quantity}", flush=True)
-
+def place_futures_order(pair, side, quantity, leverage):
     path = "/exchange/v1/derivatives/futures/orders/create"
     url = BASE_URL + path
     
@@ -66,7 +37,7 @@ def place_futures_order(pair, side, size_in_inr, leverage):
             "side": side,
             "pair": pair,
             "order_type": "market_order",
-            "total_quantity": calculated_quantity,
+            "total_quantity": quantity,
             "leverage": leverage,
             "margin_currency_short_name": "INR", 
             "notification": "email_notification",
@@ -85,7 +56,7 @@ def place_futures_order(pair, side, size_in_inr, leverage):
     }
     
     try:
-        print(f"🚀 Placing Futures Market Order for {pair} ({side.upper()})...", flush=True)
+        print(f"🚀 Placing Futures Market Order for {pair} ({side.upper()}) | Qty: {quantity} XAU | Leverage: {leverage}x...", flush=True)
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
         print(f"📦 Order Response Status: {response.status_code}", flush=True)
         print(f"📦 Order Response Body: {response.text}", flush=True)
@@ -94,7 +65,7 @@ def place_futures_order(pair, side, size_in_inr, leverage):
 
 def bot_loop():
     time.sleep(3)
-    place_futures_order(pair=TRADE_PAIR, side=TRADE_SIDE, size_in_inr=DESIRED_INR_SIZE, leverage=TRADE_LEVERAGE)
+    place_futures_order(pair=TRADE_PAIR, side=TRADE_SIDE, quantity=TRADE_QUANTITY, leverage=TRADE_LEVERAGE)
     
     while True:
         time.sleep(60)
