@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX Supertrend Bot is Live!"
+    return "CoinDCX Futures Supertrend Bot is Live!"
 
 # =====================================================================
 # ⚙️ COINDCX API CONFIGURATION & CREDS
@@ -40,9 +40,10 @@ def fetch_live_prices():
     except Exception as e:
         print(f"❌ Error fetching prices: {e}", flush=True)
 
-def check_balance():
+def check_futures_balance():
     time.sleep(3)
-    path = "/exchange/v1/users/balances"
+    # Futures wallet balance endpoint
+    path = "/exchange/v1/users/futures_balances"
     url = BASE_URL + path
     
     body = {
@@ -62,19 +63,21 @@ def check_balance():
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
         if response.status_code == 200:
             balances = response.json()
-            print("💰 Active Balances:", flush=True)
-            for b in balances:
-                # Sirf unhein print karega jinka balance ya locked balance 0 nahi hai
-                if float(b.get('balance', 0)) > 0 or float(b.get('locked_balance', 0)) > 0:
-                    print(f"   - {b['currency']}: Free = {b['balance']}, Locked = {b['locked_balance']}", flush=True)
+            print("💰 Futures Wallet Balances:", flush=True)
+            # Agar response list hai ya dictionary, uske anusaar handle karenge
+            if isinstance(balances, list):
+                for b in balances:
+                    print(f"   - {b.get('currency', 'USD')}: Balance = {b.get('balance', 0)}, Margin Balance = {b.get('margin_balance', 0)}", flush=True)
+            else:
+                print(f"   - Response: {balances}", flush=True)
         else:
-            print(f"Balance Error Status: {response.status_code}, Body: {response.text}", flush=True)
+            print(f"Futures Balance Error Status: {response.status_code}, Body: {response.text}", flush=True)
     except Exception as e:
-        print(f"❌ Error checking balance: {e}", flush=True)
+        print(f"❌ Error checking futures balance: {e}", flush=True)
 
 def bot_loop():
     while True:
-        check_balance()
+        check_futures_balance()
         fetch_live_prices()
         print("-" * 40, flush=True)
         time.sleep(60) # Har 1 minute mein update dikhayega
