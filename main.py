@@ -4,6 +4,7 @@ import hashlib
 import requests
 import json
 import os
+import threading
 from flask import Flask
 
 app = Flask(__name__)
@@ -13,7 +14,7 @@ def home():
     return "CoinDCX Connection Test is Live!"
 
 # =====================================================================
-# ⚙️ APNI ASLI COINDCX API KEYS YAHAN DALIN (No Dummy Keys)
+# ⚙️ APNI ASLI COINDCX API KEYS YAHAN DALIN
 # =====================================================================
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
@@ -27,6 +28,7 @@ def generate_coindcx_signature(secret_key, body_dict):
     return signature
 
 def check_balance():
+    time.sleep(3) # Server stable hone ka wait karega
     path = "/exchange/v1/users/balances"
     url = BASE_URL + path
     
@@ -45,12 +47,14 @@ def check_balance():
     try:
         print("🔍 Checking CoinDCX Connection...", flush=True)
         response = requests.post(url, data=json.dumps(body), headers=headers, timeout=5)
-        print("Response Status:", response.status_code, flush=True)
-        print("Response Body:", response.text, flush=True)
+        print(f"Response Status: {response.status_code}", flush=True)
+        print(f"Response Body: {response.text}", flush=True)
     except Exception as e:
         print(f"❌ Error: {e}", flush=True)
 
 if __name__ == "__main__":
-    check_balance()
+    # Background thread mein connection check chalega taaki logs me turant dikhe
+    threading.Thread(target=check_balance).start()
+    
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
