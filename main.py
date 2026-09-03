@@ -11,34 +11,33 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX Futures Bot is Live!"
+    return "CoinDCX INR-M Futures Bot is Live!"
 
 # =====================================================================
-# ⚙️ SETTINGS & CONFIGURATION
+# ⚙️ SETTINGS & CONFIGURATION (INR Margin)
 # =====================================================================
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
-TRADE_PAIR = "B-XAU_USDT" # Updated format based on API specs
-TRADE_SIZE = 1000          
-TRADE_LEVERAGE = 10        
-TRADE_SIDE = "buy"        
+TRADE_PAIR = "B-XAU_INR"   # INR-Margined pair format
+TRADE_SIZE = 1000          # Total position size in INR
+TRADE_LEVERAGE = 10       # Leverage (jaise 10x)
+TRADE_SIDE = "buy"        # "buy" (Long) ya "sell" (Short)
 # =====================================================================
 
 BASE_URL = "https://api.coindcx.com"
 
-def get_active_instruments():
+def get_inr_active_instruments():
     try:
-        url = BASE_URL + "/exchange/v1/derivatives/futures/data/active_instruments?margin_currency_short_name[]=usdt"
+        url = BASE_URL + "/exchange/v1/derivatives/futures/data/active_instruments?margin_currency_short_name[]=inr"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             instruments = response.json()
-            print("📋 Active USDT Instruments List:", flush=True)
+            print("📋 Active INR Margin Instruments List:", flush=True)
             for inst in instruments:
-                if "XAU" in str(inst).upper() or "BTC" in str(inst).upper():
-                    print(f"   -> {inst}", flush=True)
+                print(f"   -> {inst}", flush=True)
     except Exception as e:
-        print(f"❌ Error fetching instruments: {e}", flush=True)
+        print(f"❌ Error fetching INR instruments: {e}", flush=True)
 
 def place_futures_order(pair, side, total_quantity, leverage):
     path = "/exchange/v1/derivatives/futures/orders/create"
@@ -69,7 +68,7 @@ def place_futures_order(pair, side, total_quantity, leverage):
     }
     
     try:
-        print(f"🚀 Placing Futures Market Order for {pair} ({side.upper()})...", flush=True)
+        print(f"🚀 Placing INR-M Futures Market Order for {pair} ({side.upper()}) | Size: ₹{total_quantity} | Leverage: {leverage}x...", flush=True)
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
         print(f"📦 Order Response Status: {response.status_code}", flush=True)
         print(f"📦 Order Response Body: {response.text}", flush=True)
@@ -78,7 +77,7 @@ def place_futures_order(pair, side, total_quantity, leverage):
 
 def bot_loop():
     time.sleep(3)
-    get_active_instruments()
+    get_inr_active_instruments()
     place_futures_order(pair=TRADE_PAIR, side=TRADE_SIDE, total_quantity=TRADE_SIZE, leverage=TRADE_LEVERAGE)
     
     while True:
