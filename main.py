@@ -18,7 +18,7 @@ def home():
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
-BASE_URL = "https://api.coindcx.com"  # Main API URL for authenticated endpoints
+BASE_URL = "https://api.coindcx.com"
 # =====================================================================
 
 def generate_coindcx_signature(secret_key, body_dict):
@@ -28,7 +28,7 @@ def generate_coindcx_signature(secret_key, body_dict):
     return signature
 
 def check_balance():
-    path = "/v1/users/balances"
+    path = "/exchange/v1/users/balances"
     url = BASE_URL + path
     
     body = {
