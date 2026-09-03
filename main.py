@@ -20,16 +20,15 @@ API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
 TRADE_PAIR = "B-XAU_USDT" 
-DESIRED_INR_SIZE = 1000    # Yahan se aap apna INR amount change kar sakte hain
+DESIRED_INR_SIZE = 1000    # Aapka INR investment size
 TRADE_LEVERAGE = 10       
-TRADE_SIDE = "buy"        
+TRADE_SIDE = "buy"        # "buy" ya "sell"
 # =====================================================================
 
 BASE_URL = "https://api.coindcx.com"
 
 def get_live_price(pair):
     try:
-        # Method 1: Public Ticker Check
         url = "https://public.coindcx.com/exchange/ticker"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
@@ -40,38 +39,27 @@ def get_live_price(pair):
                     price = ticker.get('last_price') or ticker.get('price')
                     if price:
                         return float(price)
-        
-        # Method 2: Trade History Check
-        url_alt = f"https://public.coindcx.com/market_data/trade_history?pair={pair}"
-        res = requests.get(url_alt, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            if data and isinstance(data, list) and len(data) > 0:
-                return float(data[0].get('price', 0))
     except Exception as e:
         print(f"❌ Error fetching price: {e}", flush=True)
-    
-    # Safe Fallback Live Price (approximate current market price from screenshots)
-    print("⚠️ Using safe fallback market price.", flush=True)
-    return 4428.0
+    return 4428.0 # Fallback price
 
 def place_futures_order(pair, side, size_in_inr, leverage):
     print(f"🔍 Fetching live market price for {pair}...", flush=True)
     price = get_live_price(pair)
     
     if not price or price <= 0:
-        price = 4428.0 # Ultimate fallback
+        price = 4428.0
 
-    # Calculating exact quantity based on INR size and live price
     calculated_quantity = round(size_in_inr / price, 4)
     if calculated_quantity <= 0:
         calculated_quantity = 0.001
         
-    print(f"📊 Live Price: {price} | Calculated Quantity for ₹{size_in_inr}: {calculated_quantity}", flush=True)
+    print(f"📊 Live Price: {price} | Calculated Quantity: {calculated_quantity}", flush=True)
 
     path = "/exchange/v1/derivatives/futures/orders/create"
     url = BASE_URL + path
     
+    # Body as per official CoinDCX documentation screenshots
     body = {
         "timestamp": int(round(time.time() * 1000)),
         "order": {
@@ -80,10 +68,11 @@ def place_futures_order(pair, side, size_in_inr, leverage):
             "order_type": "market_order",
             "total_quantity": calculated_quantity,
             "leverage": leverage,
+            "margin_currency_short_name": "INR", # 🔥 Enables INR Margin Mode
             "notification": "email_notification",
-            "time_in_force": "good_till_cancel",
             "hidden": False,
             "post_only": False
+            # Note: time_in_force is intentionally removed for market orders as per docs
         }
     }
     
@@ -97,7 +86,7 @@ def place_futures_order(pair, side, size_in_inr, leverage):
     }
     
     try:
-        print(f"🚀 Placing Futures Market Order for {pair} ({side.upper()})...", flush=True)
+        print(f"🚀 Placing Futures Market Order for {pair} ({side.upper_() if hasattr(side, 'upper_') else side.upper()})...", flush=True)
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
         print(f"📦 Order Response Status: {response.status_code}", flush=True)
         print(f"📦 Order Response Body: {response.text}", flush=True)
