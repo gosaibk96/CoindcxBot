@@ -14,10 +14,10 @@ def home():
     return "CoinDCX Connection Test is Live!"
 
 # =====================================================================
-# ⚙️ APNI ASLI COINDCX API KEYS YAHAN DALIN
+# ⚙️ APNI NAYI BINA IP-RESTRICTION WALI COINDCX KEYS YAHAN DALIN
 # =====================================================================
-API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
-API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
+API_KEY = "91bfc0639dea44d72c21aa63825d5baede1f38258d06a858"
+API_SECRET = "d781e494887c9000273f2604225f84ce6c01822aae54be578963f5af99df00ee"
 
 BASE_URL = "https://api.coindcx.com"
 
@@ -28,7 +28,7 @@ def generate_coindcx_signature(secret_key, body_dict):
     return signature
 
 def check_balance():
-    time.sleep(3) # Server stable hone ka wait karega
+    time.sleep(3)
     path = "/exchange/v1/users/balances"
     url = BASE_URL + path
     
@@ -45,7 +45,7 @@ def check_balance():
     }
     
     try:
-        print("🔍 Checking CoinDCX Connection...", flush=True)
+        print("🔍 Checking CoinDCX Connection with New Key...", flush=True)
         response = requests.post(url, data=json.dumps(body), headers=headers, timeout=5)
         print(f"Response Status: {response.status_code}", flush=True)
         print(f"Response Body: {response.text}", flush=True)
@@ -53,7 +53,6 @@ def check_balance():
         print(f"❌ Error: {e}", flush=True)
 
 if __name__ == "__main__":
-    # Background thread mein connection check chalega taaki logs me turant dikhe
     threading.Thread(target=check_balance).start()
     
     port = int(os.environ.get("PORT", 10000))
