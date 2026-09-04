@@ -11,20 +11,14 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX ETH Supertrend Bot (Instant Execution) is Live & Monitoring!"
+    return "CoinDCX ETH Supertrend Fast Bot is Live!"
 
-# =====================================================================
-# ⚙️ GLOBAL API SETTINGS
-# =====================================================================
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
 SUPERTREND_PERIOD = 10      
 SUPERTREND_MULTIPLIER = 1.5 
 
-# =====================================================================
-# 🛠️ COIN SETTINGS
-# =====================================================================
 CUSTOM_SETTINGS = {
     "ETH": {"size": 2600, "leverage": 4, "timeframe": "1m"}
 }
@@ -32,42 +26,39 @@ CUSTOM_SETTINGS = {
 BASE_URL = "https://api.coindcx.com"
 
 def get_coin_config(coin_name):
-    if coin_name in CUSTOM_SETTINGS:
-        return CUSTOM_SETTINGS[coin_name]
-    return {"size": 0, "leverage": 10, "timeframe": "1m"}
+    return CUSTOM_SETTINGS.get(coin_name, {"size": 0, "leverage": 10, "timeframe": "1m"})
 
 def get_live_price(pair):
     try:
         url_public = "https://public.coindcx.com/exchange/ticker"
-        res = requests.get(url_public, timeout=5)
+        res = requests.get(url_public, timeout=3)
         if res.status_code == 200:
-            tickers = res.json()
-            for ticker in tickers:
+            for ticker in res.json():
                 market_val = ticker.get('market') or ticker.get('symbol')
                 if market_val and pair.upper() in str(market_val).upper():
                     price = ticker.get('last_price') or ticker.get('price')
                     if price:
                         return float(price)
     except Exception as e:
-        print(f"❌ Error fetching price for {pair}: {e}", flush=True)
-    return 1.0
+        pass
+    return 0.0
 
 def get_candles(pair, timeframe):
     try:
         url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval={timeframe}&limit=50"
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=3)
         if response.status_code == 200:
             data = response.json()
             if isinstance(data, dict):
                 data = data.get('data') or data.get('candles') or []
             return data
     except Exception as e:
-        print(f"❌ Error fetching candles for {pair}: {e}", flush=True)
+        pass
     return None
 
 def calculate_supertrend(candles):
-    if not candles or not isinstance(candles, list) or len(candles) < SUPERTREND_PERIOD + 2:
-        return None, False, False, 0.0, 0.0
+    if not candles or len(candles) < SUPERTREND_PERIOD + 2:
+        return None, False, 0.0, 0.0
     
     try:
         closes = []
@@ -85,45 +76,27 @@ def calculate_supertrend(candles):
                 closes.append(float(c.get('close', 0)))
                 
         if len(closes) < SUPERTREND_PERIOD + 2:
-            return None, False, False, 0.0, 0.0
+            return None, False, 0.0, 0.0
 
-        prev_close = closes[-2]
-        prev_prev_close = closes[-3]
+        current_close = closes[-1]
+        hl2 = (highs[-2] + lows[-2]) / 2
+        atr = highs[-2] - lows[-2]
+        st_value = hl2 - (SUPERTREND_MULTIPLIER * atr)
         
-        # Supertrend calculation for previous candle
-        hl2_prev = (highs[-2] + lows[-2]) / 2
-        atr_prev = highs[-2] - lows[-2]
-        st_value_prev = hl2_prev - (SUPERTREND_MULTIPLIER * atr_prev)
-        is_green_prev = prev_close > st_value_prev
-
-        # Supertrend calculation for candle before previous
-        hl2_pprev = (highs[-3] + lows[-3]) / 2
-        atr_pprev = highs[-3] - lows[-3]
-        st_value_pprev = hl2_pprev - (SUPERTREND_MULTIPLIER * atr_pprev)
-        is_green_pprev = prev_prev_close > st_value_pprev
-
-        is_red_to_green_flip = (not is_green_pprev) and is_green_prev
-        
-        return st_value_prev, is_green_prev, is_red_to_green_flip, prev_close, closes[-1]
+        is_green = current_close > st_value
+        return st_value, is_green, current_close, st_value
     except Exception as e:
-        print(f"❌ Calculation Error: {e}", flush=True)
-        return None, False, False, 0.0, 0.0
+        return None, False, 0.0, 0.0
 
 def place_order(pair, side, size_in_inr, leverage):
     if size_in_inr <= 0:
-        print(f"ℹ️ Size is set to 0 for {pair}. Skipping live order placement.", flush=True)
         return True
 
-    print(f"🔍 Fetching live market price for {pair}...", flush=True)
     price = get_live_price(pair)
-    
     if not price or price <= 0:
         price = 1.0
 
     calculated_quantity = round(size_in_inr / price, 3)
-        
-    print(f"📊 Live Price: {price} | Target INR: ₹{size_in_inr} | Calculated Qty: {calculated_quantity}", flush=True)
-
     path = "/exchange/v1/derivatives/futures/orders/create"
     url = BASE_URL + path
     
@@ -152,68 +125,57 @@ def place_order(pair, side, size_in_inr, leverage):
     }
     
     try:
-        print(f"🚀 Placing Futures Market Order for {pair} ({side.upper()})...", flush=True)
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
-        print(f"📦 Order Response Status: {response.status_code}", flush=True)
-        print(f"📦 Order Response Body: {response.text}", flush=True)
+        print(f"📦 Order Status: {response.status_code} | Body: {response.text}", flush=True)
         return response.status_code == 200
     except Exception as e:
-        print(f"❌ Error placing order: {e}", flush=True)
+        print(f"❌ Order Error: {e}", flush=True)
         return False
 
 def monitor_coin(coin_name):
     pair = f"B-{coin_name}_USDT"
     in_position = False
-    last_action_flip = False 
     
-    print(f"🤖 Monitoring started for {coin_name}", flush=True)
+    print(f"🤖 Fast Monitoring started for {coin_name}", flush=True)
     
     while True:
         try:
             config = get_coin_config(coin_name)
-            current_timeframe = config["timeframe"]
-            current_size = config["size"]
-            current_leverage = config["leverage"]
-
-            candles = get_candles(pair, current_timeframe)
+            candles = get_candles(pair, config["timeframe"])
+            
             if candles:
-                st_val, is_green, is_red_to_green_flip, prev_close, current_price = calculate_supertrend(candles)
-                
+                st_val, is_green, current_close, _ = calculate_supertrend(candles)
+                live_price = get_live_price(pair)
+                if live_price == 0:
+                    live_price = current_close
+
                 if st_val is not None:
-                    pos_status = "BUY" if in_position else "NONE"
-                    print(f"📊 [{coin_name}] Current Price: {current_price} | PrevClose: {prev_close} | ST: {st_val:.2f} | Flip: {is_red_to_green_flip} | Pos: {pos_status}", flush=True)
+                    print(f"⚡ [{coin_name}] LivePrice: {live_price} | ST: {st_val:.2f} | Green: {is_green} | Pos: {in_position}", flush=True)
                     
-                    # Entry Condition: Agar position mein nahi hain aur Red-to-Green flip hua hai
-                    if not in_position and is_red_to_green_flip and not last_action_flip:
-                        print(f"🟢 Condition Matched ({coin_name}): Red to Green Flip! Placing BUY...", flush=True)
-                        success = place_order(pair, "buy", current_size, current_leverage)
-                        if success:
+                    # Direct execution: Jaise hi price Supertrend ke upar ho aur position na ho
+                    if not in_position and is_green:
+                        print(f"🟢 Fast Entry Triggered! Placing BUY...", flush=True)
+                        if place_order(pair, "buy", config["size"], config["leverage"]):
                             in_position = True
-                            last_action_flip = True 
                     
-                    # Exit Condition: Agar position mein hain aur price Supertrend ke neeche chala gaya
-                    elif in_position and prev_close < st_val:
-                        print(f"🔴 Condition Matched ({coin_name}): Price below Supertrend! Exiting...", flush=True)
-                        success = place_order(pair, "sell", current_size, current_leverage)
-                        if success:
+                    # Exit: Jab price Supertrend ke neeche jaye
+                    elif in_position and not is_green:
+                        print(f"🔴 Fast Exit Triggered! Placing SELL...", flush=True)
+                        if place_order(pair, "sell", config["size"], config["leverage"]):
                             in_position = False
-                    
-                    # Reset flip trigger once state normalizes
-                    if not is_red_to_green_flip:
-                        last_action_flip = False
             
         except Exception as e:
-            print(f"❌ Loop Error for {coin_name}: {e}", flush=True)
+            print(f"❌ Loop Error: {e}", flush=True)
             
-        time.sleep(30)
+        # Fast check every 3 seconds instead of 30 seconds
+        time.sleep(3)
 
 def start_bot():
-    time.sleep(5)
+    time.sleep(2)
     for coin in CUSTOM_SETTINGS.keys():
         t = threading.Thread(target=monitor_coin, args=(coin,))
         t.daemon = True
         t.start()
-        time.sleep(0.3)
 
 if __name__ == "__main__":
     threading.Thread(target=start_bot, daemon=True).start()
