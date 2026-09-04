@@ -28,13 +28,35 @@ SUPERTREND_MULTIPLIER = 1.5
 
 BASE_URL = "https://api.coindcx.com"
 
+def get_live_price(pair):
+    try:
+        url_public = "https://public.coindcx.com/exchange/ticker"
+        res = requests.get(url_public, timeout=5)
+        if res.status_code == 200:
+            tickers = res.json()
+            for ticker in tickers:
+                market_val = ticker.get('market') or ticker.get('symbol')
+                if market_val and pair.upper() in str(market_val).upper():
+                    price = ticker.get('last_price') or ticker.get('price')
+                    if price:
+                        return float(price)
+    except Exception as e:
+        print(f"❌ Error fetching price for {pair}: {e}", flush=True)
+    
+    # Fallback default prices if API fails
+    fallback_prices = {
+        "B-ETH_USDT": 260000.0,
+        "B-BTC_USDT": 7800000.0,
+        "B-XAU_USDT": 4446.0
+    }
+    return fallback_prices.get(pair, 260000.0)
+
 def get_candles(pair):
     try:
         url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval=1m&limit=50"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
-            # Handle if data is wrapped inside a dictionary
             if isinstance(data, dict):
                 data = data.get('data') or data.get('candles') or []
             return data
@@ -47,7 +69,6 @@ def calculate_supertrend(candles):
         return None, False, 0.0
     
     try:
-        # Safely extract close, high, low depending on list/dict structure
         closes = []
         highs = []
         lows = []
@@ -79,10 +100,18 @@ def calculate_supertrend(candles):
         print(f"❌ Calculation Error: {e}", flush=True)
         return None, False, 0.0
 
-def place_order(pair, side, size_in_inr, leverage, price):
+def place_order(pair, side, size_in_inr, leverage):
+    print(f"🔍 Fetching live market price for {pair}...", flush=True)
+    price = get_live_price(pair)
+    
+    if not price or price <= 0:
+        price = 260000.0
+
     calculated_quantity = round(size_in_inr / price, 3)
     if calculated_quantity <= 0:
         calculated_quantity = 0.001
+        
+    print(f"📊 Live Price: {price} | Target INR: ₹{size_in_inr} | Calculated Qty: {calculated_quantity}", flush=True)
 
     path = "/exchange/v1/derivatives/futures/orders/create"
     url = BASE_URL + path
@@ -112,9 +141,10 @@ def place_order(pair, side, size_in_inr, leverage, price):
     }
     
     try:
-        print(f"🚀 Placing {side.upper()} order for {pair} | Qty: {calculated_quantity}", flush=True)
+        print(f"🚀 Placing Futures Market Order for {pair} ({side.upper()})...", flush=True)
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
-        print(f"📦 Response: {response.text}", flush=True)
+        print(f"📦 Order Response Status: {response.status_code}", flush=True)
+        print(f"📦 Order Response Body: {response.text}", flush=True)
     except Exception as e:
         print(f"❌ Error placing order: {e}", flush=True)
 
@@ -133,13 +163,13 @@ def bot_loop():
                     # ENTRY: Candle close above Supertrend
                     if not in_position and is_close_above:
                         print("🟢 Entry Condition Met: Candle closed above Supertrend!", flush=True)
-                        place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE, current_price)
+                        place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE)
                         in_position = True
                     
                     # EXIT / SL: Price crosses below Supertrend
                     elif in_position and current_price < st_val:
                         print("🔴 Exit Condition Met: Price crossed below Supertrend!", flush=True)
-                        place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE, current_price)
+                        place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
                         in_position = False
                 else:
                     print("⚠️ Waiting for enough candle data...", flush=True)
