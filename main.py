@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX Supertrend Bot is Live!"
+    return "CoinDCX Supertrend Bot is Live & Monitoring!"
 
 # =====================================================================
 # ⚙️ SETTINGS & CONFIGURATION (Supertrend 10 / 1.5)
@@ -42,14 +42,7 @@ def get_live_price(pair):
                         return float(price)
     except Exception as e:
         print(f"❌ Error fetching price for {pair}: {e}", flush=True)
-    
-    # Fallback default prices if API fails
-    fallback_prices = {
-        "B-ETH_USDT": 260000.0,
-        "B-BTC_USDT": 7800000.0,
-        "B-XAU_USDT": 4446.0
-    }
-    return fallback_prices.get(pair, 260000.0)
+    return 260000.0
 
 def get_candles(pair):
     try:
@@ -66,28 +59,32 @@ def get_candles(pair):
 
 def calculate_supertrend(candles):
     if not candles or not isinstance(candles, list) or len(candles) < SUPERTREND_PERIOD:
-        return None, False, 0.0
+        return None, False, 0.0, None
     
     try:
         closes = []
         highs = []
         lows = []
+        timestamps = []
         
         for c in candles:
             if isinstance(c, list):
+                timestamps.append(c[0])
                 highs.append(float(c[2]))
                 lows.append(float(c[3]))
                 closes.append(float(c[4]))
             elif isinstance(c, dict):
+                timestamps.append(c.get('time', 0))
                 highs.append(float(c.get('high', 0)))
                 lows.append(float(c.get('low', 0)))
                 closes.append(float(c.get('close', 0)))
                 
         if len(closes) < SUPERTREND_PERIOD:
-            return None, False, 0.0
+            return None, False, 0.0, None
 
         current_close = closes[-1]
         prev_close = closes[-2]
+        current_candle_time = timestamps[-1]
         
         hl2 = (highs[-2] + lows[-2]) / 2
         atr = (highs[-2] - lows[-2]) 
@@ -95,10 +92,10 @@ def calculate_supertrend(candles):
         
         is_close_above = prev_close > st_value
         
-        return st_value, is_close_above, current_close
+        return st_value, is_close_above, current_close, current_candle_time
     except Exception as e:
         print(f"❌ Calculation Error: {e}", flush=True)
-        return None, False, 0.0
+        return None, False, 0.0, None
 
 def place_order(pair, side, size_in_inr, leverage):
     print(f"🔍 Fetching live market price for {pair}...", flush=True)
@@ -145,32 +142,51 @@ def place_order(pair, side, size_in_inr, leverage):
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
         print(f"📦 Order Response Status: {response.status_code}", flush=True)
         print(f"📦 Order Response Body: {response.text}", flush=True)
+        return response.status_code == 200
     except Exception as e:
         print(f"❌ Error placing order: {e}", flush=True)
+        return False
 
 def bot_loop():
     time.sleep(5)
     in_position = False
+    last_processed_candle = None
+    
+    print("🤖 Bot started successfully. Waiting for Supertrend condition match...", flush=True)
     
     while True:
         try:
             candles = get_candles(TRADE_PAIR)
             if candles:
-                st_val, is_close_above, current_price = calculate_supertrend(candles)
+                st_val, is_close_above, current_price, candle_time = calculate_supertrend(candles)
+                
                 if st_val is not None:
-                    print(f"📊 Price: {current_price} | Supertrend (10/1.5): {st_val} | In Position: {in_position}", flush=True)
+                    print(f"📊 Status -> Price: {current_price} | Supertrend (10/1.5): {st_val:.2f} | In Position: {in_position}", flush=True)
                     
-                    # ENTRY: Candle close above Supertrend
-                    if not in_position and is_close_above:
-                        print("🟢 Entry Condition Met: Candle closed above Supertrend!", flush=True)
-                        place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE)
-                        in_position = True
-                    
-                    # EXIT / SL: Price crosses below Supertrend
-                    elif in_position and current_price < st_val:
-                        print("🔴 Exit Condition Met: Price crossed below Supertrend!", flush=True)
-                        place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
-                        in_position = False
+                    # Ensure we only process a new candle to avoid instant duplicate triggers
+                    if candle_time != last_processed_candle:
+                        last_processed_candle = candle_time
+                        
+                        # ENTRY: Candle close above Supertrend
+                        if not in_position and is_close_above:
+                            print("🟢 Condition Matched: New candle closed above Supertrend! Placing BUY order...", flush=True)
+                            success = place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE)
+                            if success:
+                                in_position = True
+                        
+                        # EXIT / SL: Price crosses below Supertrend
+                        elif in_position and current_price < st_val:
+                            print("🔴 Condition Matched: Price crossed below Supertrend! Exiting position...", flush=True)
+                            success = place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
+                            if success:
+                                in_position = False
+                    else:
+                        # Real-time SL check even within the same candle if price drops below supertrend line
+                        if in_position and current_price < st_val:
+                            print("🔴 Real-time SL Hit: Price crossed below Supertrend! Exiting position...", flush=True)
+                            success = place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
+                            if success:
+                                in_position = False
                 else:
                     print("⚠️ Waiting for enough candle data...", flush=True)
             else:
@@ -179,7 +195,7 @@ def bot_loop():
         except Exception as e:
             print(f"❌ Loop Error: {e}", flush=True)
             
-        time.sleep(60)
+        time.sleep(30)
 
 if __name__ == "__main__":
     threading.Thread(target=bot_loop).start()
