@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX Direct Futures Synchronized Supertrend Bot is Live!"
+    return "CoinDCX Exact TradingView Supertrend Bot is Live!"
 
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
@@ -29,7 +29,6 @@ def get_coin_config(coin_name):
     return CUSTOM_SETTINGS.get(coin_name, {"quantity": 0.02, "leverage": 10, "timeframe": "1m"})
 
 def get_futures_candles(pair, timeframe):
-    """ Direct Exchange Futures candles data jo chart se match kare """
     try:
         url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval={timeframe}&limit=100"
         response = requests.get(url, timeout=3)
@@ -39,8 +38,6 @@ def get_futures_candles(pair, timeframe):
                 data = data.get('data') or data.get('candles') or []
             
             if data and isinstance(data, list):
-                # Ensure data is sorted by timestamp oldest to newest
-                # Format check: c[0] is usually timestamp
                 try:
                     data = sorted(data, key=lambda x: x[0] if isinstance(x, list) else x.get('time', 0))
                 except Exception:
@@ -66,7 +63,7 @@ def get_live_futures_price(pair):
     return 0.0
 
 def calculate_supertrend(candles):
-    if not candles or len(candles) < SUPERTREND_PERIOD + 2:
+    if not candles or len(candles) < SUPERTREND_PERIOD + 5:
         return None, False, False, False, 0.0, 0.0, None
     
     try:
@@ -87,24 +84,37 @@ def calculate_supertrend(candles):
                 lows.append(float(c.get('low', 0)))
                 closes.append(float(c.get('close', 0)))
                 
-        if len(closes) < SUPERTREND_PERIOD + 2:
+        length = len(closes)
+        if length < SUPERTREND_PERIOD + 5:
             return None, False, False, False, 0.0, 0.0, None
 
-        # Standard Supertrend loop calculation over entire series to match TradingView precisely
-        st_values = [0.0] * len(closes)
-        direc = [1] * len(closes) # 1 for green/up, -1 for red/down
-        
-        hl2 = [(highs[i] + lows[i]) / 2 for i in range(len(closes))]
-        atr = [highs[i] - lows[i] for i in range(len(closes))] # Simplified ATR approximation based on high-low or standard range
+        # 1. True Range (TR) Calculation
+        tr = [0.0] * length
+        tr[0] = highs[0] - lows[0]
+        for i in range(1, length):
+            hl = highs[i] - lows[i]
+            hc = abs(highs[i] - closes[i-1])
+            lc = abs(lows[i] - closes[i-1])
+            tr[i] = max(hl, hc, lc)
 
-        # Basic Upper and Lower Bands
-        basic_ub = [hl2[i] + (SUPERTREND_MULTIPLIER * atr[i]) for i in range(len(closes))]
-        basic_lb = [hl2[i] - (SUPERTREND_MULTIPLIER * atr[i]) for i in range(len(closes))]
+        # 2. Wilder's ATR Calculation
+        atr = [0.0] * length
+        atr[SUPERTREND_PERIOD] = sum(tr[1:SUPERTREND_PERIOD+1]) / SUPERTREND_PERIOD
+        for i in range(SUPERTREND_PERIOD + 1, length):
+            atr[i] = (atr[i-1] * (SUPERTREND_PERIOD - 1) + tr[i]) / SUPERTREND_PERIOD
+
+        # 3. Basic & Final Upper/Lower Bands
+        st_values = [0.0] * length
+        direc = [1] * length # 1 for Up (Green), -1 for Down (Red)
         
-        final_ub = [0.0] * len(closes)
-        final_lb = [0.0] * len(closes)
+        hl2 = [(highs[i] + lows[i]) / 2 for i in range(length)]
+        basic_ub = [hl2[i] + (SUPERTREND_MULTIPLIER * atr[i]) for i in range(length)]
+        basic_lb = [hl2[i] - (SUPERTREND_MULTIPLIER * atr[i]) for i in range(length)]
         
-        for i in range(1, len(closes)):
+        final_ub = [0.0] * length
+        final_lb = [0.0] * length
+        
+        for i in range(SUPERTREND_PERIOD, length):
             # Final Upper Band
             if basic_ub[i] < final_ub[i-1] or closes[i-1] > final_ub[i-1]:
                 final_ub[i] = basic_ub[i]
@@ -117,8 +127,9 @@ def calculate_supertrend(candles):
             else:
                 final_lb[i] = final_lb[i-1]
                 
-            # Supertrend Line
-            if i < SUPERTREND_PERIOD:
+            # Supertrend Line Direction
+            if i == SUPERTREND_PERIOD:
+                st_values[i] = final_ub[i]
                 continue
                 
             if st_values[i-1] == final_ub[i-1] and closes[i] <= final_ub[i]:
@@ -134,9 +145,8 @@ def calculate_supertrend(candles):
                 st_values[i] = final_ub[i]
                 direc[i] = -1
 
-        # Current and Previous indexes
-        idx = len(closes) - 2 # Last closed candle
-        prev_idx = len(closes) - 3 # Candle before last closed
+        idx = length - 2 # Last closed candle
+        prev_idx = length - 3 # Candle before last closed
         
         st_val = st_values[idx]
         is_green_prev = direc[idx] == 1
@@ -199,7 +209,7 @@ def monitor_coin(coin_name):
     in_position = False
     last_processed_time = None 
     
-    print(f"🤖 Synchronized Chart-Match Bot started for {coin_name}", flush=True)
+    print(f"🤖 True-Range Supertrend Bot started for {coin_name}", flush=True)
     
     while True:
         try:
@@ -215,17 +225,15 @@ def monitor_coin(coin_name):
                 if st_val is not None and candle_time is not None:
                     trend_color = "GREEN" if is_green_prev else "RED"
                     pos_status = "BUY" if in_position else "NONE"
-                    print(f"⚡ [{coin_name}] Live: {live_price} | PrevClose: {prev_close} | ST: {st_val:.2f} ({trend_color}) | R2G: {is_red_to_green_flip} | Pos: {pos_status}", flush=True)
+                    print(f"⚡ [{coin_name}] Live: {live_price} | PrevClose: {prev_close} | ST: {st_val:.2f} ({trend_color}) | Pos: {pos_status}", flush=True)
                     
                     if candle_time != last_processed_time:
-                        # ENTRY: Red se Green flip hone par candle close hone par
                         if not in_position and is_red_to_green_flip:
                             print(f"🟢 Candle Closed Above Red ST! Placing BUY...", flush=True)
                             if place_order(pair, "buy", config["quantity"], config["leverage"]):
                                 in_position = True
                                 last_processed_time = candle_time
                         
-                        # EXIT: Green se Red flip hone par candle close hone par
                         elif in_position and is_green_to_red_flip:
                             print(f"🔴 Candle Closed Below Green ST! Placing SELL (Exit)...", flush=True)
                             if place_order(pair, "sell", config["quantity"], config["leverage"]):
