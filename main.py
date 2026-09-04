@@ -14,7 +14,7 @@ def home():
     return "CoinDCX Supertrend Bot is Live & Monitoring!"
 
 # =====================================================================
-# ⚙️ SETTINGS & CONFIGURATION (Supertrend 10 / 1.5)
+# ⚙️ SETTINGS & CONFIGURATION
 # =====================================================================
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
@@ -27,6 +27,9 @@ SUPERTREND_MULTIPLIER = 1.5
 # =====================================================================
 
 BASE_URL = "https://api.coindcx.com"
+
+# Extract clean coin name (e.g., "ETH" from "B-ETH_USDT")
+COIN_NAME = TRADE_PAIR.split('_')[0].replace('B-', '')
 
 def get_live_price(pair):
     try:
@@ -152,7 +155,14 @@ def bot_loop():
     in_position = False
     last_processed_candle = None
     
-    print("🤖 Bot started successfully. Waiting for Supertrend condition match...", flush=True)
+    print("🤖 Bot started successfully. Initializing candle timestamp...", flush=True)
+    
+    # Initialization step: Grab current latest candle so we skip executing on past/current running candle
+    initial_candles = get_candles(TRADE_PAIR)
+    if initial_candles and len(initial_candles) > 0:
+        last_processed_candle = initial_candles[-1][0] if isinstance(initial_candles[-1], list) else initial_candles[-1].get('time', 0)
+    
+    print(f"📌 Locked current candle time: {last_processed_candle}. Now monitoring for next candle close...", flush=True)
     
     while True:
         try:
@@ -161,20 +171,19 @@ def bot_loop():
                 st_val, is_close_above, current_price, candle_time = calculate_supertrend(candles)
                 
                 if st_val is not None:
-                    print(f"📊 Status -> Price: {current_price} | Supertrend (10/1.5): {st_val:.2f} | In Position: {in_position}", flush=True)
+                    pos_status = "BUY" if in_position else "NONE"
+                    print(f"📊 {COIN_NAME} Price: {current_price} | Supertrend: {st_val:.2f} | Position: {pos_status}", flush=True)
                     
-                    # Ensure we only process a new candle to avoid instant duplicate triggers
-                    if candle_time != last_processed_candle:
+                    # Process only when a new candle timestamp appears
+                    if candle_time and candle_time != last_processed_candle:
                         last_processed_candle = candle_time
                         
-                        # ENTRY: Candle close above Supertrend
                         if not in_position and is_close_above:
                             print("🟢 Condition Matched: New candle closed above Supertrend! Placing BUY order...", flush=True)
                             success = place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE)
                             if success:
                                 in_position = True
                         
-                        # EXIT / SL: Price crosses below Supertrend
                         elif in_position and current_price < st_val:
                             print("🔴 Condition Matched: Price crossed below Supertrend! Exiting position...", flush=True)
                             success = place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
