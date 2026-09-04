@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX ETH Supertrend Fast Bot is Live!"
+    return "CoinDCX ETH Supertrend Bot (Fixed Quantity) is Live!"
 
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
@@ -19,14 +19,17 @@ API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 SUPERTREND_PERIOD = 10      
 SUPERTREND_MULTIPLIER = 1.5 
 
+# =====================================================================
+# 🛠️ COIN SETTINGS (Ab yahan seedhi quantity set kar sakte hain jaise 0.02)
+# =====================================================================
 CUSTOM_SETTINGS = {
-    "ETH": {"size": 2600, "leverage": 4, "timeframe": "1m"}
+    "ETH": {"quantity": 0.02, "leverage": 4, "timeframe": "1m"}
 }
 
 BASE_URL = "https://api.coindcx.com"
 
 def get_coin_config(coin_name):
-    return CUSTOM_SETTINGS.get(coin_name, {"size": 0, "leverage": 10, "timeframe": "1m"})
+    return CUSTOM_SETTINGS.get(coin_name, {"quantity": 0.02, "leverage": 10, "timeframe": "1m"})
 
 def get_live_price(pair):
     try:
@@ -88,18 +91,11 @@ def calculate_supertrend(candles):
     except Exception as e:
         return None, False, 0.0
 
-def place_order(pair, side, size_in_inr, leverage, current_price):
-    if size_in_inr <= 0:
+def place_order(pair, side, quantity, leverage):
+    if quantity <= 0:
         return True
 
-    if not current_price or current_price <= 0:
-        current_price = get_live_price(pair)
-        if not current_price or current_price <= 0:
-            print(f"❌ Error: Invalid price for order placement", flush=True)
-            return False
-
-    calculated_quantity = round(size_in_inr / current_price, 3)
-    print(f"📊 Placing Order -> Price: {current_price} | Qty: {calculated_quantity}", flush=True)
+    print(f"📊 Placing Order -> Side: {side.upper()} | Qty: {quantity} | Leverage: {leverage}x", flush=True)
 
     path = "/exchange/v1/derivatives/futures/orders/create"
     url = BASE_URL + path
@@ -110,7 +106,7 @@ def place_order(pair, side, size_in_inr, leverage, current_price):
             "side": side,
             "pair": pair,
             "order_type": "market_order",
-            "total_quantity": calculated_quantity,
+            "total_quantity": quantity,
             "leverage": leverage,
             "margin_currency_short_name": "INR", 
             "notification": "email_notification",
@@ -140,7 +136,7 @@ def monitor_coin(coin_name):
     pair = f"B-{coin_name}_USDT"
     in_position = False
     
-    print(f"🤖 Fast Monitoring started for {coin_name}", flush=True)
+    print(f"🤖 Monitoring started for {coin_name}", flush=True)
     
     while True:
         try:
@@ -157,13 +153,13 @@ def monitor_coin(coin_name):
                     print(f"⚡ [{coin_name}] LivePrice: {live_price} | ST: {st_val:.2f} | Green: {is_green} | Pos: {in_position}", flush=True)
                     
                     if not in_position and is_green:
-                        print(f"🟢 Fast Entry Triggered! Placing BUY...", flush=True)
-                        if place_order(pair, "buy", config["size"], config["leverage"], live_price):
+                        print(f"🟢 Entry Triggered! Placing BUY...", flush=True)
+                        if place_order(pair, "buy", config["quantity"], config["leverage"]):
                             in_position = True
                     
                     elif in_position and not is_green:
-                        print(f"🔴 Fast Exit Triggered! Placing SELL...", flush=True)
-                        if place_order(pair, "sell", config["size"], config["leverage"], live_price):
+                        print(f"🔴 Exit Triggered! Placing SELL...", flush=True)
+                        if place_order(pair, "sell", config["quantity"], config["leverage"]):
                             in_position = False
             
         except Exception as e:
