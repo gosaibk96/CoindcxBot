@@ -58,7 +58,7 @@ def get_candles(pair, timeframe):
 
 def calculate_supertrend(candles):
     if not candles or len(candles) < SUPERTREND_PERIOD + 2:
-        return None, False, 0.0, 0.0
+        return None, False, 0.0
     
     try:
         closes = []
@@ -76,7 +76,7 @@ def calculate_supertrend(candles):
                 closes.append(float(c.get('close', 0)))
                 
         if len(closes) < SUPERTREND_PERIOD + 2:
-            return None, False, 0.0, 0.0
+            return None, False, 0.0
 
         current_close = closes[-1]
         hl2 = (highs[-2] + lows[-2]) / 2
@@ -84,19 +84,23 @@ def calculate_supertrend(candles):
         st_value = hl2 - (SUPERTREND_MULTIPLIER * atr)
         
         is_green = current_close > st_value
-        return st_value, is_green, current_close, st_value
+        return st_value, is_green, current_close
     except Exception as e:
-        return None, False, 0.0, 0.0
+        return None, False, 0.0
 
-def place_order(pair, side, size_in_inr, leverage):
+def place_order(pair, side, size_in_inr, leverage, current_price):
     if size_in_inr <= 0:
         return True
 
-    price = get_live_price(pair)
-    if not price or price <= 0:
-        price = 1.0
+    if not current_price or current_price <= 0:
+        current_price = get_live_price(pair)
+        if not current_price or current_price <= 0:
+            print(f"❌ Error: Invalid price for order placement", flush=True)
+            return False
 
-    calculated_quantity = round(size_in_inr / price, 3)
+    calculated_quantity = round(size_in_inr / current_price, 3)
+    print(f"📊 Placing Order -> Price: {current_price} | Qty: {calculated_quantity}", flush=True)
+
     path = "/exchange/v1/derivatives/futures/orders/create"
     url = BASE_URL + path
     
@@ -144,7 +148,7 @@ def monitor_coin(coin_name):
             candles = get_candles(pair, config["timeframe"])
             
             if candles:
-                st_val, is_green, current_close, _ = calculate_supertrend(candles)
+                st_val, is_green, current_close = calculate_supertrend(candles)
                 live_price = get_live_price(pair)
                 if live_price == 0:
                     live_price = current_close
@@ -152,22 +156,19 @@ def monitor_coin(coin_name):
                 if st_val is not None:
                     print(f"⚡ [{coin_name}] LivePrice: {live_price} | ST: {st_val:.2f} | Green: {is_green} | Pos: {in_position}", flush=True)
                     
-                    # Direct execution: Jaise hi price Supertrend ke upar ho aur position na ho
                     if not in_position and is_green:
                         print(f"🟢 Fast Entry Triggered! Placing BUY...", flush=True)
-                        if place_order(pair, "buy", config["size"], config["leverage"]):
+                        if place_order(pair, "buy", config["size"], config["leverage"], live_price):
                             in_position = True
                     
-                    # Exit: Jab price Supertrend ke neeche jaye
                     elif in_position and not is_green:
                         print(f"🔴 Fast Exit Triggered! Placing SELL...", flush=True)
-                        if place_order(pair, "sell", config["size"], config["leverage"]):
+                        if place_order(pair, "sell", config["size"], config["leverage"], live_price):
                             in_position = False
             
         except Exception as e:
             print(f"❌ Loop Error: {e}", flush=True)
             
-        # Fast check every 3 seconds instead of 30 seconds
         time.sleep(3)
 
 def start_bot():
