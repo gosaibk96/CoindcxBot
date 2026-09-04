@@ -20,7 +20,7 @@ SUPERTREND_PERIOD = 10
 SUPERTREND_MULTIPLIER = 1.5 
 
 CUSTOM_SETTINGS = {
-    "ETH": {"quantity": 0.02, "leverage": 10, "timeframe": "1m"}
+    "ETH": {"quantity": 0.00, "leverage": 10, "timeframe": "1m"}
 }
 
 BASE_URL = "https://api.coindcx.com"
