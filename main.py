@@ -11,59 +11,56 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX Futures Bot is Live!"
+    return "CoinDCX Supertrend Bot is Live!"
 
 # =====================================================================
-# ⚙️ SETTINGS & CONFIGURATION
+# ⚙️ SETTINGS & CONFIGURATION (Supertrend 10 / 1.5)
 # =====================================================================
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
-TRADE_PAIR = "B-ETH_USDT"  # Aap yahan koi bhi pair daal sakte hain (jaise B-BTC_USDT, B-XAU_USDT)
-DESIRED_INR_SIZE = 2600     # Aapka fixed investment size in INR (₹700)
-TRADE_LEVERAGE = 4        
-TRADE_SIDE = "buy"         # "buy" ya "sell"
+TRADE_PAIR = "B-ETH_USDT"
+DESIRED_INR_SIZE = 2600
+TRADE_LEVERAGE = 4
+SUPERTREND_PERIOD = 10      # Length set to 10
+SUPERTREND_MULTIPLIER = 1.5 # Multiplier set to 1.5
 # =====================================================================
 
 BASE_URL = "https://api.coindcx.com"
 
-def get_live_price(pair):
+def get_candles(pair):
     try:
-        url_public = "https://public.coindcx.com/exchange/ticker"
-        res = requests.get(url_public, timeout=5)
-        if res.status_code == 200:
-            tickers = res.json()
-            for ticker in tickers:
-                market_val = ticker.get('market') or ticker.get('symbol')
-                if market_val and pair.upper() in str(market_val).upper():
-                    price = ticker.get('last_price') or ticker.get('price')
-                    if price:
-                        return float(price)
+        url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval=1m&limit=50"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            return response.json()
     except Exception as e:
-        print(f"❌ Error fetching price: {e}", flush=True)
-    
-    # Fallback default prices for common pairs if API fails
-    fallback_prices = {
-        "B-ETH_USDT": 260000.0,
-        "B-BTC_USDT": 7800000.0,
-        "B-XAU_USDT": 4446.0
-    }
-    print("⚠️ Using fallback market price for pair.", flush=True)
-    return fallback_prices.get(pair, 1000.0)
+        print(f"❌ Error fetching candles: {e}", flush=True)
+    return None
 
-def place_futures_order(pair, side, size_in_inr, leverage):
-    print(f"🔍 Fetching live market price for {pair}...", flush=True)
-    price = get_live_price(pair)
+def calculate_supertrend(candles):
+    if not candles or len(candles) < SUPERTREND_PERIOD:
+        return None, False, 0.0
     
-    if not price or price <= 0:
-        price = 260000.0
+    closes = [float(c[4]) for c in candles]
+    highs = [float(c[2]) for c in candles]
+    lows = [float(c[3]) for c in candles]
+    
+    current_close = closes[-1]
+    prev_close = closes[-2]
+    
+    hl2 = (highs[-2] + lows[-2]) / 2
+    atr = (highs[-2] - lows[-2]) 
+    st_value = hl2 - (SUPERTREND_MULTIPLIER * atr)
+    
+    is_close_above = prev_close > st_value
+    
+    return st_value, is_close_above, current_close
 
-    # Automatically calculates quantity based on INR size and rounds to 3 decimals
+def place_order(pair, side, size_in_inr, leverage, price):
     calculated_quantity = round(size_in_inr / price, 3)
     if calculated_quantity <= 0:
         calculated_quantity = 0.001
-        
-    print(f"📊 Live Price: {price} | Target INR: ₹{size_in_inr} | Calculated Qty: {calculated_quantity}", flush=True)
 
     path = "/exchange/v1/derivatives/futures/orders/create"
     url = BASE_URL + path
@@ -93,18 +90,38 @@ def place_futures_order(pair, side, size_in_inr, leverage):
     }
     
     try:
-        print(f"🚀 Placing Futures Market Order for {pair} ({side.upper()})...", flush=True)
+        print(f"🚀 Placing {side.upper()} order for {pair} | Qty: {calculated_quantity}", flush=True)
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
-        print(f"📦 Order Response Status: {response.status_code}", flush=True)
-        print(f"📦 Order Response Body: {response.text}", flush=True)
+        print(f"📦 Response: {response.text}", flush=True)
     except Exception as e:
         print(f"❌ Error placing order: {e}", flush=True)
 
 def bot_loop():
-    time.sleep(3)
-    place_futures_order(pair=TRADE_PAIR, side=TRADE_SIDE, size_in_inr=DESIRED_INR_SIZE, leverage=TRADE_LEVERAGE)
+    time.sleep(5)
+    in_position = False
     
     while True:
+        try:
+            candles = get_candles(TRADE_PAIR)
+            if candles:
+                st_val, is_close_above, current_price = calculate_supertrend(candles)
+                print(f"📊 Price: {current_price} | Supertrend (10/1.5): {st_val} | In Position: {in_position}", flush=True)
+                
+                # ENTRY: Candle close above Supertrend
+                if not in_position and is_close_above:
+                    print("🟢 Entry Condition Met: Candle closed above Supertrend!", flush=True)
+                    place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE, current_price)
+                    in_position = True
+                
+                # EXIT / SL: Price crosses below Supertrend
+                elif in_position and current_price < st_val:
+                    print("🔴 Exit Condition Met: Price crossed below Supertrend!", flush=True)
+                    place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE, current_price)
+                    in_position = False
+                    
+        except Exception as e:
+            print(f"❌ Loop Error: {e}", flush=True)
+            
         time.sleep(60)
 
 if __name__ == "__main__":
