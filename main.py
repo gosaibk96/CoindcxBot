@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX ETH Supertrend Bot (Fixed Quantity) is Live!"
+    return "CoinDCX ETH Strict Candle Close Supertrend Bot is Live!"
 
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
@@ -19,9 +19,6 @@ API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 SUPERTREND_PERIOD = 10      
 SUPERTREND_MULTIPLIER = 1.5 
 
-# =====================================================================
-# 🛠️ COIN SETTINGS (Ab yahan seedhi quantity set kar sakte hain jaise 0.02)
-# =====================================================================
 CUSTOM_SETTINGS = {
     "ETH": {"quantity": 0.02, "leverage": 4, "timeframe": "1m"}
 }
@@ -61,35 +58,55 @@ def get_candles(pair, timeframe):
 
 def calculate_supertrend(candles):
     if not candles or len(candles) < SUPERTREND_PERIOD + 2:
-        return None, False, 0.0
+        return None, False, False, False, 0.0, 0.0, None
     
     try:
         closes = []
         highs = []
         lows = []
+        timestamps = []
         
         for c in candles:
             if isinstance(c, list):
+                timestamps.append(c[0])
                 highs.append(float(c[2]))
                 lows.append(float(c[3]))
                 closes.append(float(c[4]))
             elif isinstance(c, dict):
+                timestamps.append(c.get('time', 0))
                 highs.append(float(c.get('high', 0)))
                 lows.append(float(c.get('low', 0)))
                 closes.append(float(c.get('close', 0)))
                 
         if len(closes) < SUPERTREND_PERIOD + 2:
-            return None, False, 0.0
+            return None, False, False, False, 0.0, 0.0, None
 
+        prev_close = closes[-2]
+        prev_prev_close = closes[-3]
         current_close = closes[-1]
-        hl2 = (highs[-2] + lows[-2]) / 2
-        atr = highs[-2] - lows[-2]
-        st_value = hl2 - (SUPERTREND_MULTIPLIER * atr)
+        last_closed_candle_time = timestamps[-2]
+
+        # Previous closed candle Supertrend (-2)
+        hl2_prev = (highs[-2] + lows[-2]) / 2
+        atr_prev = highs[-2] - lows[-2]
+        st_value_prev = hl2_prev - (SUPERTREND_MULTIPLIER * atr_prev)
+        is_green_prev = prev_close > st_value_prev
+
+        # Candle before previous Supertrend (-3)
+        hl2_pprev = (highs[-3] + lows[-3]) / 2
+        atr_pprev = highs[-3] - lows[-3]
+        st_value_pprev = hl2_pprev - (SUPERTREND_MULTIPLIER * atr_pprev)
+        is_green_pprev = prev_prev_close > st_value_pprev
+
+        # Strict Red to Green Crossover on Close
+        is_red_to_green_flip = (not is_green_pprev) and is_green_prev
+
+        # Strict Green to Red Crossover on Close
+        is_green_to_red_flip = is_green_pprev and (not is_green_prev)
         
-        is_green = current_close > st_value
-        return st_value, is_green, current_close
+        return st_value_prev, is_green_prev, is_red_to_green_flip, is_green_to_red_flip, current_close, prev_close, last_closed_candle_time
     except Exception as e:
-        return None, False, 0.0
+        return None, False, False, False, 0.0, 0.0, None
 
 def place_order(pair, side, quantity, leverage):
     if quantity <= 0:
@@ -135,8 +152,9 @@ def place_order(pair, side, quantity, leverage):
 def monitor_coin(coin_name):
     pair = f"B-{coin_name}_USDT"
     in_position = False
+    last_processed_time = None 
     
-    print(f"🤖 Monitoring started for {coin_name}", flush=True)
+    print(f"🤖 Strict Candle-Close Bot started for {coin_name}", flush=True)
     
     while True:
         try:
@@ -144,23 +162,35 @@ def monitor_coin(coin_name):
             candles = get_candles(pair, config["timeframe"])
             
             if candles:
-                st_val, is_green, current_close = calculate_supertrend(candles)
+                st_val, is_green_prev, is_red_to_green_flip, is_green_to_red_flip, current_close, prev_close, candle_time = calculate_supertrend(candles)
                 live_price = get_live_price(pair)
                 if live_price == 0:
                     live_price = current_close
 
-                if st_val is not None:
-                    print(f"⚡ [{coin_name}] LivePrice: {live_price} | ST: {st_val:.2f} | Green: {is_green} | Pos: {in_position}", flush=True)
+                if st_val is not None and candle_time is not None:
+                    pos_status = "BUY" if in_position else "NONE"
+                    print(f"⚡ [{coin_name}] Live: {live_price} | PrevClose: {prev_close} | ST: {st_val:.2f} | R2G: {is_red_to_green_flip} | Pos: {pos_status}", flush=True)
                     
-                    if not in_position and is_green:
-                        print(f"🟢 Entry Triggered! Placing BUY...", flush=True)
-                        if place_order(pair, "buy", config["quantity"], config["leverage"]):
-                            in_position = True
-                    
-                    elif in_position and not is_green:
-                        print(f"🔴 Exit Triggered! Placing SELL...", flush=True)
-                        if place_order(pair, "sell", config["quantity"], config["leverage"]):
-                            in_position = False
+                    # Sirf tabhi action lo jab naye closed candle ka time match ho aur pehle process na kiya ho
+                    if candle_time != last_processed_time:
+                        
+                        # ENTRY: Red se Green flip hone par candle close hone par
+                        if not in_position and is_red_to_green_flip:
+                            print(f"🟢 Candle Closed Above Red ST! Placing BUY...", flush=True)
+                            if place_order(pair, "buy", config["quantity"], config["leverage"]):
+                                in_position = True
+                                last_processed_time = candle_time
+                        
+                        # EXIT: Green se Red flip hone par candle close hone par
+                        elif in_position and is_green_to_red_flip:
+                            print(f"🔴 Candle Closed Below Green ST! Placing SELL (Exit)...", flush=True)
+                            if place_order(pair, "sell", config["quantity"], config["leverage"]):
+                                in_position = False
+                                last_processed_time = candle_time
+                        
+                        # Agar koi signal match nahi hua par naye candle ka time hai, toh time update kar do
+                        else:
+                            last_processed_time = candle_time
             
         except Exception as e:
             print(f"❌ Loop Error: {e}", flush=True)
