@@ -36,7 +36,7 @@ RAW_COINS = [
 TRADE_PAIRS = [f"B-{coin}_USDT" for coin in RAW_COINS]
 
 TIMEFRAME = "1m"            # ⏱️ Timeframe change kar sakte hain (jaise "1m", "3m", "5m", "15m")
-DESIRED_INR_SIZE = 2600        # Size set to 0 as requested
+DESIRED_INR_SIZE = 00        # Size set to 0 as requested
 TRADE_LEVERAGE = 4
 SUPERTREND_PERIOD = 10      
 SUPERTREND_MULTIPLIER = 1.5 
