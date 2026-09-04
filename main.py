@@ -20,10 +20,10 @@ API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
 TRADE_PAIR = "B-ETH_USDT"
-DESIRED_INR_SIZE = 2600
-TRADE_LEVERAGE = 4
-SUPERTREND_PERIOD = 10      # Length set to 10
-SUPERTREND_MULTIPLIER = 1.5 # Multiplier set to 1.5
+DESIRED_INR_SIZE = 700
+TRADE_LEVERAGE = 10
+SUPERTREND_PERIOD = 10      
+SUPERTREND_MULTIPLIER = 1.5 
 # =====================================================================
 
 BASE_URL = "https://api.coindcx.com"
@@ -33,29 +33,51 @@ def get_candles(pair):
         url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval=1m&limit=50"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
-            return response.json()
+            data = response.json()
+            # Handle if data is wrapped inside a dictionary
+            if isinstance(data, dict):
+                data = data.get('data') or data.get('candles') or []
+            return data
     except Exception as e:
         print(f"❌ Error fetching candles: {e}", flush=True)
     return None
 
 def calculate_supertrend(candles):
-    if not candles or len(candles) < SUPERTREND_PERIOD:
+    if not candles or not isinstance(candles, list) or len(candles) < SUPERTREND_PERIOD:
         return None, False, 0.0
     
-    closes = [float(c[4]) for c in candles]
-    highs = [float(c[2]) for c in candles]
-    lows = [float(c[3]) for c in candles]
-    
-    current_close = closes[-1]
-    prev_close = closes[-2]
-    
-    hl2 = (highs[-2] + lows[-2]) / 2
-    atr = (highs[-2] - lows[-2]) 
-    st_value = hl2 - (SUPERTREND_MULTIPLIER * atr)
-    
-    is_close_above = prev_close > st_value
-    
-    return st_value, is_close_above, current_close
+    try:
+        # Safely extract close, high, low depending on list/dict structure
+        closes = []
+        highs = []
+        lows = []
+        
+        for c in candles:
+            if isinstance(c, list):
+                highs.append(float(c[2]))
+                lows.append(float(c[3]))
+                closes.append(float(c[4]))
+            elif isinstance(c, dict):
+                highs.append(float(c.get('high', 0)))
+                lows.append(float(c.get('low', 0)))
+                closes.append(float(c.get('close', 0)))
+                
+        if len(closes) < SUPERTREND_PERIOD:
+            return None, False, 0.0
+
+        current_close = closes[-1]
+        prev_close = closes[-2]
+        
+        hl2 = (highs[-2] + lows[-2]) / 2
+        atr = (highs[-2] - lows[-2]) 
+        st_value = hl2 - (SUPERTREND_MULTIPLIER * atr)
+        
+        is_close_above = prev_close > st_value
+        
+        return st_value, is_close_above, current_close
+    except Exception as e:
+        print(f"❌ Calculation Error: {e}", flush=True)
+        return None, False, 0.0
 
 def place_order(pair, side, size_in_inr, leverage, price):
     calculated_quantity = round(size_in_inr / price, 3)
@@ -105,19 +127,24 @@ def bot_loop():
             candles = get_candles(TRADE_PAIR)
             if candles:
                 st_val, is_close_above, current_price = calculate_supertrend(candles)
-                print(f"📊 Price: {current_price} | Supertrend (10/1.5): {st_val} | In Position: {in_position}", flush=True)
-                
-                # ENTRY: Candle close above Supertrend
-                if not in_position and is_close_above:
-                    print("🟢 Entry Condition Met: Candle closed above Supertrend!", flush=True)
-                    place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE, current_price)
-                    in_position = True
-                
-                # EXIT / SL: Price crosses below Supertrend
-                elif in_position and current_price < st_val:
-                    print("🔴 Exit Condition Met: Price crossed below Supertrend!", flush=True)
-                    place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE, current_price)
-                    in_position = False
+                if st_val is not None:
+                    print(f"📊 Price: {current_price} | Supertrend (10/1.5): {st_val} | In Position: {in_position}", flush=True)
+                    
+                    # ENTRY: Candle close above Supertrend
+                    if not in_position and is_close_above:
+                        print("🟢 Entry Condition Met: Candle closed above Supertrend!", flush=True)
+                        place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE, current_price)
+                        in_position = True
+                    
+                    # EXIT / SL: Price crosses below Supertrend
+                    elif in_position and current_price < st_val:
+                        print("🔴 Exit Condition Met: Price crossed below Supertrend!", flush=True)
+                        place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE, current_price)
+                        in_position = False
+                else:
+                    print("⚠️ Waiting for enough candle data...", flush=True)
+            else:
+                print("⚠️ Failed to fetch candles.", flush=True)
                     
         except Exception as e:
             print(f"❌ Loop Error: {e}", flush=True)
