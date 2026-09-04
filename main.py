@@ -20,8 +20,8 @@ API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
 TRADE_PAIR = "B-ETH_USDT"  # Aap yahan koi bhi pair daal sakte hain (jaise B-BTC_USDT, B-XAU_USDT)
-DESIRED_INR_SIZE = 700     # Aapka fixed investment size in INR (₹700)
-TRADE_LEVERAGE = 10        
+DESIRED_INR_SIZE = 2600     # Aapka fixed investment size in INR (₹700)
+TRADE_LEVERAGE = 4        
 TRADE_SIDE = "buy"         # "buy" ya "sell"
 # =====================================================================
 
