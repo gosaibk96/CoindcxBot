@@ -62,8 +62,8 @@ def get_candles(pair):
     return None
 
 def calculate_supertrend(candles):
-    if not candles or not isinstance(candles, list) or len(candles) < SUPERTREND_PERIOD:
-        return None, False, 0.0, None
+    if not candles or not isinstance(candles, list) or len(candles) < SUPERTREND_PERIOD + 2:
+        return None, False, False, 0.0, None
     
     try:
         closes = []
@@ -83,23 +83,32 @@ def calculate_supertrend(candles):
                 lows.append(float(c.get('low', 0)))
                 closes.append(float(c.get('close', 0)))
                 
-        if len(closes) < SUPERTREND_PERIOD:
-            return None, False, 0.0, None
+        if len(closes) < SUPERTREND_PERIOD + 2:
+            return None, False, False, 0.0, None
 
         current_close = closes[-1]
         prev_close = closes[-2]
+        prev_prev_close = closes[-3]
         current_candle_time = timestamps[-1]
         
-        hl2 = (highs[-2] + lows[-2]) / 2
-        atr = (highs[-2] - lows[-2]) 
-        st_value = hl2 - (SUPERTREND_MULTIPLIER * atr)
+        # Calculate Supertrend for previous and previous-previous candles to detect flip
+        hl2_prev = (highs[-2] + lows[-2]) / 2
+        atr_prev = highs[-2] - lows[-2]
+        st_value_prev = hl2_prev - (SUPERTREND_MULTIPLIER * atr_prev)
+        is_green_prev = prev_close > st_value_prev
+
+        hl2_pprev = (highs[-3] + lows[-3]) / 2
+        atr_pprev = highs[-3] - lows[-3]
+        st_value_pprev = hl2_pprev - (SUPERTREND_MULTIPLIER * atr_pprev)
+        is_green_pprev = prev_prev_close > st_value_pprev
+
+        # Red to Green Flip detection: Was Red (False) previously, now Green (True)
+        is_red_to_green_flip = (not is_green_pprev) and is_green_prev
         
-        is_close_above = prev_close > st_value
-        
-        return st_value, is_close_above, current_close, current_candle_time
+        return st_value_prev, is_green_prev, is_red_to_green_flip, current_close, current_candle_time
     except Exception as e:
         print(f"❌ Calculation Error: {e}", flush=True)
-        return None, False, 0.0, None
+        return None, False, False, 0.0, None
 
 def place_order(pair, side, size_in_inr, leverage):
     print(f"🔍 Fetching live market price for {pair}...", flush=True)
@@ -155,15 +164,15 @@ def bot_loop():
     time.sleep(5)
     in_position = False
     last_processed_candle = None
-    startup_guard = 3  # 🛡️ Bot shuru hote hi pehle 3 checks tak sirf monitor karega, order nahi dega
+    startup_guard = 3  
     
-    print(f"🤖 Bot started successfully on Timeframe: {TIMEFRAME}. Entering observation mode...", flush=True)
+    print(f"🤖 Bot started successfully on Timeframe: {TIMEFRAME}. Monitoring Supertrend Red-to-Green flips...", flush=True)
     
     while True:
         try:
             candles = get_candles(TRADE_PAIR)
             if candles:
-                st_val, is_close_above, current_price, candle_time = calculate_supertrend(candles)
+                st_val, is_green, is_red_to_green_flip, current_price, candle_time = calculate_supertrend(candles)
                 
                 if st_val is not None:
                     pos_status = "BUY" if in_position else "NONE"
@@ -177,18 +186,21 @@ def bot_loop():
                         if candle_time and candle_time != last_processed_candle:
                             last_processed_candle = candle_time
                             
-                            if not in_position and is_close_above:
-                                print("🟢 Condition Matched: New candle closed above Supertrend! Placing BUY order...", flush=True)
+                            # ENTRY: Only buy if fresh Red-to-Green flip occurs on candle close
+                            if not in_position and is_red_to_green_flip:
+                                print("🟢 Condition Matched: Supertrend flipped from Red to Green! Placing BUY order...", flush=True)
                                 success = place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE)
                                 if success:
                                     in_position = True
                             
+                            # EXIT / SL: Price crosses below Supertrend
                             elif in_position and current_price < st_val:
                                 print("🔴 Condition Matched: Price crossed below Supertrend! Exiting position...", flush=True)
                                 success = place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
                                 if success:
                                     in_position = False
                         else:
+                            # Real-time SL check even within the same candle if price drops below supertrend line
                             if in_position and current_price < st_val:
                                 print("🔴 Real-time SL Hit: Price crossed below Supertrend! Exiting position...", flush=True)
                                 success = place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
