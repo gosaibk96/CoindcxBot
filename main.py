@@ -20,6 +20,7 @@ API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
 TRADE_PAIR = "B-ETH_USDT"
+TIMEFRAME = "1m"            # ⏱️ Yahan se timeframe change kar sakte hain (jaise "1m", "3m", "5m", "15m")
 DESIRED_INR_SIZE = 2600
 TRADE_LEVERAGE = 4
 SUPERTREND_PERIOD = 10      
@@ -49,7 +50,7 @@ def get_live_price(pair):
 
 def get_candles(pair):
     try:
-        url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval=1m&limit=50"
+        url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval={TIMEFRAME}&limit=50"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
@@ -154,9 +155,9 @@ def bot_loop():
     time.sleep(5)
     in_position = False
     last_processed_candle = None
-    is_initialized = False  # 🛡️ Prevents execution on startup
+    startup_guard = 3  # 🛡️ Bot shuru hote hi pehle 3 checks tak sirf monitor karega, order nahi dega
     
-    print("🤖 Bot started successfully. Initializing and waiting for fresh candle...", flush=True)
+    print(f"🤖 Bot started successfully on Timeframe: {TIMEFRAME}. Entering observation mode...", flush=True)
     
     while True:
         try:
@@ -168,13 +169,11 @@ def bot_loop():
                     pos_status = "BUY" if in_position else "NONE"
                     print(f"📊 {COIN_NAME} Price: {current_price} | Supertrend: {st_val:.2f} | Position: {pos_status}", flush=True)
                     
-                    # Capture starting candle time to skip current running candle
-                    if not is_initialized:
+                    if startup_guard > 0:
+                        startup_guard -= 1
                         last_processed_candle = candle_time
-                        is_initialized = True
-                        print(f"📌 Initialized! Skipping current active candle. Monitoring future closes...", flush=True)
+                        print(f"🛡️ Startup Guard Active: Skipping trade execution. ({startup_guard} checks left)", flush=True)
                     else:
-                        # Process only when a new candle timestamp appears
                         if candle_time and candle_time != last_processed_candle:
                             last_processed_candle = candle_time
                             
@@ -190,7 +189,6 @@ def bot_loop():
                                 if success:
                                     in_position = False
                         else:
-                            # Real-time SL check even within the same candle if price drops below supertrend line
                             if in_position and current_price < st_val:
                                 print("🔴 Real-time SL Hit: Price crossed below Supertrend! Exiting position...", flush=True)
                                 success = place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
