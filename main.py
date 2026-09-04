@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX ETH Strict Candle Close Supertrend Bot is Live!"
+    return "CoinDCX Futures Direct Feed Supertrend Bot is Live!"
 
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
@@ -28,23 +28,38 @@ BASE_URL = "https://api.coindcx.com"
 def get_coin_config(coin_name):
     return CUSTOM_SETTINGS.get(coin_name, {"quantity": 0.02, "leverage": 10, "timeframe": "1m"})
 
-def get_live_price(pair):
+def get_live_futures_price(pair):
+    """ Direct CoinDCX Futures market live price fetch karne ke liye """
     try:
-        url_public = "https://public.coindcx.com/exchange/ticker"
-        res = requests.get(url_public, timeout=3)
+        url = "https://public.coindcx.com/exchange/ticker"
+        res = requests.get(url, timeout=3)
         if res.status_code == 200:
-            for ticker in res.json():
-                market_val = ticker.get('market') or ticker.get('symbol')
-                if market_val and pair.upper() in str(market_val).upper():
-                    price = ticker.get('last_price') or ticker.get('price')
+            for item in res.json():
+                market = item.get('market') or item.get('symbol')
+                # Futures contracts ke liye 'B-ETH_USDT' ya similar format match karte hain
+                if market and pair.upper() in str(market).upper():
+                    price = item.get('last_price') or item.get('price')
                     if price:
                         return float(price)
     except Exception as e:
         pass
+    
+    # Fallback: Agar futures ticker me na mile toh derivatives exchange endpoint try karo
+    try:
+        url_deriv = "https://api.coindcx.com/exchange/v1/derivatives/futures/data/active_instruments"
+        res = requests.get(url_deriv, timeout=3)
+        if res.status_code == 200:
+            for inst in res.json():
+                if inst.get('pair') == pair:
+                    return float(inst.get('last_price', 0))
+    except Exception as e:
+        pass
+        
     return 0.0
 
 def get_candles(pair, timeframe):
     try:
+        # Futures market data candles endpoint
         url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval={timeframe}&limit=50"
         response = requests.get(url, timeout=3)
         if response.status_code == 200:
@@ -112,7 +127,7 @@ def place_order(pair, side, quantity, leverage):
     if quantity <= 0:
         return True
 
-    print(f"📊 Placing Order -> Side: {side.upper()} | Qty: {quantity} | Leverage: {leverage}x", flush=True)
+    print(f"📊 Placing Futures Order -> Side: {side.upper()} | Qty: {quantity} | Leverage: {leverage}x", flush=True)
 
     path = "/exchange/v1/derivatives/futures/orders/create"
     url = BASE_URL + path
@@ -154,7 +169,7 @@ def monitor_coin(coin_name):
     in_position = False
     last_processed_time = None 
     
-    print(f"🤖 Strict Candle-Close Bot started for {coin_name}", flush=True)
+    print(f"🤖 Futures Direct-Feed Bot started for {coin_name}", flush=True)
     
     while True:
         try:
@@ -163,17 +178,15 @@ def monitor_coin(coin_name):
             
             if candles:
                 st_val, is_green_prev, is_red_to_green_flip, is_green_to_red_flip, current_close, prev_close, candle_time = calculate_supertrend(candles)
-                live_price = get_live_price(pair)
+                live_price = get_live_futures_price(pair)
                 if live_price == 0:
                     live_price = current_close
 
                 if st_val is not None and candle_time is not None:
                     pos_status = "BUY" if in_position else "NONE"
-                    print(f"⚡ [{coin_name}] Live: {live_price} | PrevClose: {prev_close} | ST: {st_val:.2f} | R2G: {is_red_to_green_flip} | Pos: {pos_status}", flush=True)
+                    print(f"⚡ [{coin_name}] Futures Live: {live_price} | PrevClose: {prev_close} | ST: {st_val:.2f} | R2G: {is_red_to_green_flip} | Pos: {pos_status}", flush=True)
                     
-                    # Sirf tabhi action lo jab naye closed candle ka time match ho aur pehle process na kiya ho
                     if candle_time != last_processed_time:
-                        
                         # ENTRY: Red se Green flip hone par candle close hone par
                         if not in_position and is_red_to_green_flip:
                             print(f"🟢 Candle Closed Above Red ST! Placing BUY...", flush=True)
@@ -188,7 +201,6 @@ def monitor_coin(coin_name):
                                 in_position = False
                                 last_processed_time = candle_time
                         
-                        # Agar koi signal match nahi hua par naye candle ka time hai, toh time update kar do
                         else:
                             last_processed_time = candle_time
             
