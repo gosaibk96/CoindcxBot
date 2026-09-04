@@ -154,15 +154,9 @@ def bot_loop():
     time.sleep(5)
     in_position = False
     last_processed_candle = None
+    is_initialized = False  # 🛡️ Prevents execution on startup
     
-    print("🤖 Bot started successfully. Initializing candle timestamp...", flush=True)
-    
-    # Initialization step: Grab current latest candle so we skip executing on past/current running candle
-    initial_candles = get_candles(TRADE_PAIR)
-    if initial_candles and len(initial_candles) > 0:
-        last_processed_candle = initial_candles[-1][0] if isinstance(initial_candles[-1], list) else initial_candles[-1].get('time', 0)
-    
-    print(f"📌 Locked current candle time: {last_processed_candle}. Now monitoring for next candle close...", flush=True)
+    print("🤖 Bot started successfully. Initializing and waiting for fresh candle...", flush=True)
     
     while True:
         try:
@@ -174,28 +168,34 @@ def bot_loop():
                     pos_status = "BUY" if in_position else "NONE"
                     print(f"📊 {COIN_NAME} Price: {current_price} | Supertrend: {st_val:.2f} | Position: {pos_status}", flush=True)
                     
-                    # Process only when a new candle timestamp appears
-                    if candle_time and candle_time != last_processed_candle:
+                    # Capture starting candle time to skip current running candle
+                    if not is_initialized:
                         last_processed_candle = candle_time
-                        
-                        if not in_position and is_close_above:
-                            print("🟢 Condition Matched: New candle closed above Supertrend! Placing BUY order...", flush=True)
-                            success = place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE)
-                            if success:
-                                in_position = True
-                        
-                        elif in_position and current_price < st_val:
-                            print("🔴 Condition Matched: Price crossed below Supertrend! Exiting position...", flush=True)
-                            success = place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
-                            if success:
-                                in_position = False
+                        is_initialized = True
+                        print(f"📌 Initialized! Skipping current active candle. Monitoring future closes...", flush=True)
                     else:
-                        # Real-time SL check even within the same candle if price drops below supertrend line
-                        if in_position and current_price < st_val:
-                            print("🔴 Real-time SL Hit: Price crossed below Supertrend! Exiting position...", flush=True)
-                            success = place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
-                            if success:
-                                in_position = False
+                        # Process only when a new candle timestamp appears
+                        if candle_time and candle_time != last_processed_candle:
+                            last_processed_candle = candle_time
+                            
+                            if not in_position and is_close_above:
+                                print("🟢 Condition Matched: New candle closed above Supertrend! Placing BUY order...", flush=True)
+                                success = place_order(TRADE_PAIR, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE)
+                                if success:
+                                    in_position = True
+                            
+                            elif in_position and current_price < st_val:
+                                print("🔴 Condition Matched: Price crossed below Supertrend! Exiting position...", flush=True)
+                                success = place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
+                                if success:
+                                    in_position = False
+                        else:
+                            # Real-time SL check even within the same candle if price drops below supertrend line
+                            if in_position and current_price < st_val:
+                                print("🔴 Real-time SL Hit: Price crossed below Supertrend! Exiting position...", flush=True)
+                                success = place_order(TRADE_PAIR, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
+                                if success:
+                                    in_position = False
                 else:
                     print("⚠️ Waiting for enough candle data...", flush=True)
             else:
