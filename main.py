@@ -11,38 +11,131 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "CoinDCX Multi-Coin Supertrend Bot is Live & Monitoring!"
+    return "CoinDCX Multi-Coin Custom Config Bot is Live & Monitoring!"
 
 # =====================================================================
-# ⚙️ SETTINGS & CONFIGURATION
+# ⚙️ GLOBAL API SETTINGS
 # =====================================================================
 API_KEY = "13b49b25afb4db3558c3a164740bdbaaf365e93bdf63aff6"
 API_SECRET = "443c5865cda7332aced28532f7593ccf43fa754179bef484fbbea2198777cfb2"
 
-# All coins extracted from your screenshots added to the monitoring list
-RAW_COINS = [
-    "ROBO", "USUAL", "DRIFT", "CHILLGUY", "TRUTH", "RARE", "BLUAI", "GRIFFAIN", "XAN", "SENT",
-    "W", "SIGN", "CTR", "GPS", "ACT", "MAV", "BABY", "COOKIE", "WOO",
-    "BANANAS31", "BLESS", "AVAAI", "SXT", "MOCA", "PENGU", "BB", "MOVE", "SAHARA", "ARPA", "ZK",
-    "BIGTIME", "VET", "FOGO", "INX", "1000XEC", "GMT", "XAI", "SWARMS", "ZORA", "PEOPLE",
-    "BRETT", "SPACE", "ACH", "1000SHIB", "USTC", "ASTR", "HOME", "XNY", "ALT", "ROSE",
-    "ANKR", "PUMP", "JASMY", "WAXP", "T", "MANTRA", "KAT", "ATH", "PIXEL", "TRIA",
-    "REZ", "IOTX", "RVN", "1000BONK", "F", "FIGHT", "1000PEPE", "SKL", "G", "SOPH",
-    "GALA", "1000CAT", "TOWNS", "LINEA", "TAC", "XVG", "ZIL", "ANIME", "SOLV", "GUN",
-    "PTB", "ONE", "BOME", "TURBO", "XPIN", "CKB", "RSR", "TLM", "NOM", "BEAMX", "JCT",
-    "HMSTR", "HOT", "1MBABYDOGE", "VTHO", "MEW", "NOT", "MEME", "IOST", "SLP", "TAG"
-]
-
-TRADE_PAIRS = [f"B-{coin}_USDT" for coin in RAW_COINS]
-
-TIMEFRAME = "1m"            # ⏱️ Timeframe change kar sakte hain (jaise "1m", "3m", "5m", "15m")
-DESIRED_INR_SIZE = 00        # Size set to 0 as requested
-TRADE_LEVERAGE = 4
 SUPERTREND_PERIOD = 10      
 SUPERTREND_MULTIPLIER = 1.5 
+
 # =====================================================================
+# 🛠️ ALL COINS SETTINGS (ETH sabse upar hai. Size '0' matlab band, value dalne par us size se trade hoga)
+# =====================================================================
+CUSTOM_SETTINGS = {
+    "ETH":        {"size": 2600, "leverage": 4, "timeframe": "1m"},
+    "ROBO":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "USUAL":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "DRIFT":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "CHILLGUY":   {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "TRUTH":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "RARE":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "BLUAI":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "GRIFFAIN":   {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "XAN":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "SENT":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "W":          {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "SIGN":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "CTR":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "GPS":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ACT":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "MAV":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "BABY":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "COOKIE":     {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "WOO":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "BANANAS31":  {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "BLESS":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "AVAAI":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "SXT":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "MOCA":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "PENGU":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "BB":         {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "MOVE":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "SAHARA":     {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ARPA":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ZK":         {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "BIGTIME":    {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "VET":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "FOGO":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "INX":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "1000XEC":    {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "GMT":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "XAI":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "SWARMS":     {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ZORA":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "PEOPLE":     {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "BRETT":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "SPACE":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ACH":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "1000SHIB":   {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "USTC":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ASTR":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "HOME":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "XNY":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ALT":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ROSE":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ANKR":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "PUMP":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "JASMY":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "WAXP":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "T":          {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "MANTRA":     {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "KAT":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ATH":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "PIXEL":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "TRIA":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "REZ":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "IOTX":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "RVN":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "1000BONK":   {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "F":          {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "FIGHT":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "1000PEPE":   {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "SKL":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "G":          {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "SOPH":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "GALA":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "1000CAT":    {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "TOWNS":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "LINEA":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "TAC":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "XVG":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ZIL":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ANIME":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "SOLV":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "GUN":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "PTB":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "ONE":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "BOME":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "TURBO":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "XPIN":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "CKB":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "RSR":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "TLM":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "NOM":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "BEAMX":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "JCT":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "HMSTR":      {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "HOT":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "1MBABYDOGE": {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "VTHO":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "MEW":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "NOT":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "MEME":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "IOST":       {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "SLP":        {"size": 0, "leverage": 10, "timeframe": "1m"},
+    "TAG":        {"size": 0, "leverage": 10, "timeframe": "1m"}
+}
 
 BASE_URL = "https://api.coindcx.com"
+
+def get_coin_config(coin_name):
+    if coin_name in CUSTOM_SETTINGS:
+        return CUSTOM_SETTINGS[coin_name]
+    return {"size": 0, "leverage": 10, "timeframe": "1m"}
 
 def get_live_price(pair):
     try:
@@ -60,9 +153,9 @@ def get_live_price(pair):
         print(f"❌ Error fetching price for {pair}: {e}", flush=True)
     return 1.0
 
-def get_candles(pair):
+def get_candles(pair, timeframe):
     try:
-        url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval={TIMEFRAME}&limit=50"
+        url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval={timeframe}&limit=50"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
@@ -121,13 +214,17 @@ def calculate_supertrend(candles):
         return None, False, False, 0.0, None
 
 def place_order(pair, side, size_in_inr, leverage):
+    if size_in_inr <= 0:
+        print(f"ℹ️ Size is set to 0 for {pair}. Skipping live order placement.", flush=True)
+        return True
+
     print(f"🔍 Fetching live market price for {pair}...", flush=True)
     price = get_live_price(pair)
     
     if not price or price <= 0:
         price = 1.0
 
-    calculated_quantity = round(size_in_inr / price, 3) if size_in_inr > 0 else 0.0
+    calculated_quantity = round(size_in_inr / price, 3)
         
     print(f"📊 Live Price: {price} | Target INR: ₹{size_in_inr} | Calculated Qty: {calculated_quantity}", flush=True)
 
@@ -168,23 +265,28 @@ def place_order(pair, side, size_in_inr, leverage):
         print(f"❌ Error placing order: {e}", flush=True)
         return False
 
-def monitor_coin(pair):
-    coin_name = pair.split('_')[0].replace('B-', '')
+def monitor_coin(coin_name):
+    pair = f"B-{coin_name}_USDT"
     in_position = False
     last_processed_candle = None
     startup_guard = 3  
     
-    print(f"🤖 Monitoring started for {coin_name} on Timeframe: {TIMEFRAME}", flush=True)
+    print(f"🤖 Monitoring started for {coin_name}", flush=True)
     
     while True:
         try:
-            candles = get_candles(pair)
+            config = get_coin_config(coin_name)
+            current_timeframe = config["timeframe"]
+            current_size = config["size"]
+            current_leverage = config["leverage"]
+
+            candles = get_candles(pair, current_timeframe)
             if candles:
                 st_val, is_green, is_red_to_green_flip, current_price, candle_time = calculate_supertrend(candles)
                 
                 if st_val is not None:
                     pos_status = "BUY" if in_position else "NONE"
-                    print(f"📊 {coin_name} Price: {current_price} | Supertrend: {st_val:.2f} | Position: {pos_status}", flush=True)
+                    print(f"📊 [{coin_name} | TF: {current_timeframe} | Size: ₹{current_size}] Price: {current_price} | ST: {st_val:.2f} | Pos: {pos_status}", flush=True)
                     
                     if startup_guard > 0:
                         startup_guard -= 1
@@ -193,23 +295,21 @@ def monitor_coin(pair):
                         if candle_time and candle_time != last_processed_candle:
                             last_processed_candle = candle_time
                             
-                            # ENTRY: Only buy if fresh Red-to-Green flip occurs on candle close
                             if not in_position and is_red_to_green_flip:
-                                print(f"🟢 Condition Matched ({coin_name}): Supertrend flipped from Red to Green! Placing BUY order...", flush=True)
-                                success = place_order(pair, "buy", DESIRED_INR_SIZE, TRADE_LEVERAGE)
+                                print(f"🟢 Condition Matched ({coin_name}): Red to Green Flip! Placing BUY...", flush=True)
+                                success = place_order(pair, "buy", current_size, current_leverage)
                                 if success:
                                     in_position = True
                             
-                            # EXIT / SL: Price crosses below Supertrend
                             elif in_position and current_price < st_val:
-                                print(f"🔴 Condition Matched ({coin_name}): Price crossed below Supertrend! Exiting position...", flush=True)
-                                success = place_order(pair, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
+                                print(f"🔴 Condition Matched ({coin_name}): Price below Supertrend! Exiting...", flush=True)
+                                success = place_order(pair, "sell", current_size, current_leverage)
                                 if success:
                                     in_position = False
                         else:
                             if in_position and current_price < st_val:
-                                print(f"🔴 Real-time SL Hit ({coin_name}): Price crossed below Supertrend! Exiting position...", flush=True)
-                                success = place_order(pair, "sell", DESIRED_INR_SIZE, TRADE_LEVERAGE)
+                                print(f"🔴 Real-time SL Hit ({coin_name})! Exiting...", flush=True)
+                                success = place_order(pair, "sell", current_size, current_leverage)
                                 if success:
                                     in_position = False
             
@@ -220,11 +320,11 @@ def monitor_coin(pair):
 
 def start_bot():
     time.sleep(5)
-    for pair in TRADE_PAIRS:
-        t = threading.Thread(target=monitor_coin, args=(pair,))
+    for coin in CUSTOM_SETTINGS.keys():
+        t = threading.Thread(target=monitor_coin, args=(coin,))
         t.daemon = True
         t.start()
-        time.sleep(0.5)
+        time.sleep(0.3)
 
 if __name__ == "__main__":
     threading.Thread(target=start_bot, daemon=True).start()
