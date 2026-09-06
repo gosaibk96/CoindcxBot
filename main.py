@@ -13,19 +13,19 @@ STATS = {}
 
 CUSTOM_SETTINGS = {
     "1000PEPE": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "PUMP": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "TRIA": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "PENGU": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
+    "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "1h"},
+    "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
+    "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
     "1000SHIB": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
     "1000BONK": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
     "ANKR": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
     "JASMY": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "ZORA": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "PEOPLE": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "MOVE": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
+    "ZORA": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
+    "PEOPLE": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
+    "MOVE": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
     "CHILLGUY": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "BRETT": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "MANTRA": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
+    "BRETT": {"quantity": 1100.0, "leverage": 2, "timeframe": "1h"},
+    "MANTRA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
     "VET": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
     "GMT": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
     "ROSE": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
@@ -38,8 +38,8 @@ CUSTOM_SETTINGS = {
     "WAXP": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
     "SIGN": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
     "BIGTIME": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "RARE": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "GRIFFAIN": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
+    "RARE": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
+    "GRIFFAIN": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
     "BLUAI": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
     "REZ": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"}
 }
@@ -47,7 +47,7 @@ CUSTOM_SETTINGS = {
 for coin in CUSTOM_SETTINGS.keys():
     STATS[coin] = {
         "total_trades": 0, "wins": 0, "losses": 0, "pnl": 0.0,
-        "status": "MONITORING", "last_price": 0.0, "st_val": 0.0, "trend": "RED"
+        "status": "MONITORING"
     }
 
 @app.route('/')
@@ -66,20 +66,17 @@ def dashboard():
             tr:nth-child(even) { background: #1a1a1a; }
             .win { color: #00ff00; font-weight: bold; }
             .loss { color: #ff4d4d; font-weight: bold; }
-            .green { color: #00ff00; font-weight: bold; }
-            .red { color: #ff4d4d; font-weight: bold; }
+            .monitoring { color: #b3b3b3; }
+            .in-trade { color: #00ffcc; font-weight: bold; }
         </style>
     </head>
     <body>
-        <h2>🚀 Multi-Coin Supertrend Strategy Dashboard</h2>
+        <h2>🚀 Strategy Performance Dashboard</h2>
         <p>Auto-refreshing every 5 seconds...</p>
         <table>
             <tr>
-                <th>Coin</th>
+                <th>Coin Name</th>
                 <th>Status</th>
-                <th>Last Price</th>
-                <th>Supertrend</th>
-                <th>Trend</th>
                 <th>Total Trades</th>
                 <th>Wins</th>
                 <th>Losses</th>
@@ -90,14 +87,11 @@ def dashboard():
     for coin, data in STATS.items():
         win_rate = (data["wins"] / data["total_trades"] * 100) if data["total_trades"] > 0 else 0.0
         pnl_class = "win" if data["pnl"] >= 0 else "loss"
-        trend_class = "green" if data["trend"] == "GREEN" else "red"
+        status_class = "in-trade" if data["status"] == "IN_TRADE" else "monitoring"
         html += f"""
             <tr>
                 <td><b>{coin}</b></td>
-                <td>{data['status']}</td>
-                <td>{data['last_price']}</td>
-                <td>{data['st_val']:.4f}</td>
-                <td class="{trend_class}">{data['trend']}</td>
+                <td class="{status_class}">{data['status']}</td>
                 <td>{data['total_trades']}</td>
                 <td style="color: #00ff00;">{data['wins']}</td>
                 <td style="color: #ff4d4d;">{data['losses']}</td>
@@ -260,34 +254,35 @@ def monitor_coin(coin_name):
                     live_price = current_close
 
                 if st_val is not None and current_st is not None and candle_time is not None:
-                    trend_color = "GREEN" if is_green_prev else "RED"
-                    STATS[coin_name]["last_price"] = live_price
-                    STATS[coin_name]["st_val"] = current_st
-                    STATS[coin_name]["trend"] = trend_color
                     STATS[coin_name]["status"] = "IN_TRADE" if in_position else "MONITORING"
                     
-                    # Terminal logs print
-                    print(f"⚡ [{coin_name}] Live: {live_price} | ST: {current_st:.4f} ({trend_color}) | Pos: {STATS[coin_name]['status']}", flush=True)
+                    print(f"⚡ [{coin_name}] Live: {live_price} | ST: {current_st:.4f} | Pos: {STATS[coin_name]['status']}", flush=True)
                     
-                    if not in_position and candle_time != last_processed_time:
-                        if is_red_to_green_flip:
-                            print(f"🟢 [{coin_name}] Candle Closed Above Red ST! Simulating BUY...", flush=True)
-                            if place_order(pair, "buy", config["quantity"], config["leverage"]):
-                                in_position = True
-                                entry_price = live_price
-                                STATS[coin_name]["total_trades"] += 1
-                        last_processed_time = candle_time
+                    # ENTRY: Sirf tabhi buy hoga jab Red to Green flip exact naye candle par detect ho
+                    if not in_position:
+                        if candle_time != last_processed_time:
+                            if is_red_to_green_flip:
+                                print(f"🟢 [{coin_name}] Red to Green Flip! Placing BUY order...", flush=True)
+                                if place_order(pair, "buy", config["quantity"], config["leverage"]):
+                                    in_position = True
+                                    entry_price = live_price
+                                    STATS[coin_name]["total_trades"] += 1
+                                    STATS[coin_name]["status"] = "IN_TRADE"
+                            last_processed_time = candle_time
                     
-                    if in_position and live_price < current_st:
-                        print(f"🔴 [{coin_name}] Live Price Crossed Below ST! Simulating SELL...", flush=True)
-                        if place_order(pair, "sell", config["quantity"], config["leverage"]):
-                            in_position = False
-                            pnl_delta = live_price - entry_price
-                            STATS[coin_name]["pnl"] += pnl_delta
-                            if pnl_delta >= 0:
-                                STATS[coin_name]["wins"] += 1
-                            else:
-                                STATS[coin_name]["losses"] += 1
+                    # EXIT: Live price Supertrend ke niche cross kare
+                    elif in_position:
+                        if live_price < current_st:
+                            print(f"🔴 [{coin_name}] Price crossed below ST! Placing SELL order...", flush=True)
+                            if place_order(pair, "sell", config["quantity"], config["leverage"]):
+                                in_position = False
+                                pnl_delta = live_price - entry_price
+                                STATS[coin_name]["pnl"] += pnl_delta
+                                if pnl_delta >= 0:
+                                    STATS[coin_name]["wins"] += 1
+                                else:
+                                    STATS[coin_name]["losses"] += 1
+                                STATS[coin_name]["status"] = "MONITORING"
         except Exception as e:
             print(f"❌ [{coin_name}] Error: {e}", flush=True)
         time.sleep(3)
