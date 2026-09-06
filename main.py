@@ -12,38 +12,23 @@ app = Flask(__name__)
 STATS = {}
 
 CUSTOM_SETTINGS = {
-    "1000PEPE": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
     "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "1h"},
     "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
     "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
-    "1000SHIB": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "1000BONK": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "ANKR": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "JASMY": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
     "ZORA": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
     "PEOPLE": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
     "MOVE": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
-    "CHILLGUY": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
+    "CHILLGUY": {"quantity": 400.0, "leverage": 2, "timeframe": "1h"},
     "BRETT": {"quantity": 1100.0, "leverage": 2, "timeframe": "1h"},
     "MANTRA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
-    "VET": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "GMT": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "ROSE": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "IOTX": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "WOO": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "ACT": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "USUAL": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "DRIFT": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "TRUTH": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "WAXP": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "SIGN": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "BIGTIME": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
+    "VET": {"quantity": 900.0, "leverage": 2, "timeframe": "1h"},
+    "GMT": {"quantity": 850.0, "leverage": 2, "timeframe": "1h"},
+    "ROSE": {"quantity": 800.0, "leverage": 2, "timeframe": "1h"},
+    "TRUTH": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
+    "SIGN": {"quantity": 550.0, "leverage": 2, "timeframe": "1h"},
     "RARE": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
     "GRIFFAIN": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
-    "BLUAI": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"},
-    "REZ": {"quantity": 0.0, "leverage": 10, "timeframe": "1m"}
-}
-
+   }
 for coin in CUSTOM_SETTINGS.keys():
     STATS[coin] = {
         "total_trades": 0, "wins": 0, "losses": 0, "pnl": 0.0,
