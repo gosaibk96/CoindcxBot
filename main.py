@@ -13,20 +13,20 @@ app = Flask(__name__)
 STATS = {}
 
 CUSTOM_SETTINGS = {
-    "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "60m"},
-    "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "60m"},
-    "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "60m"},
-    "ZORA": {"quantity": 750.0, "leverage": 2, "timeframe": "60m"},
-    "PEOPLE": {"quantity": 750.0, "leverage": 2, "timeframe": "60m"},
-    "MOVE": {"quantity": 700.0, "leverage": 2, "timeframe": "60m"},
-    "CHILLGUY": {"quantity": 400.0, "leverage": 2, "timeframe": "60m"},
-    "BRETT": {"quantity": 1100.0, "leverage": 2, "timeframe": "60m"},
-    "MANTRA": {"quantity": 1400.0, "leverage": 2, "timeframe": "60m"},
-    "VET": {"quantity": 900.0, "leverage": 2, "timeframe": "60m"},
-    "GMT": {"quantity": 850.0, "leverage": 2, "timeframe": "60m"},
-    "ROSE": {"quantity": 800.0, "leverage": 2, "timeframe": "60m"},
-    "TRUTH": {"quantity": 500.0, "leverage": 2, "timeframe": "60m"},
-    "SIGN": {"quantity": 550.0, "leverage": 2, "timeframe": "60m"},
+    "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "1h"},
+    "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
+    "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
+    "ZORA": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
+    "PEOPLE": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
+    "MOVE": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
+    "CHILLGUY": {"quantity": 400.0, "leverage": 2, "timeframe": "1h"},
+    "BRETT": {"quantity": 1100.0, "leverage": 2, "timeframe": "1h"},
+    "MANTRA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
+    "VET": {"quantity": 900.0, "leverage": 2, "timeframe": "1h"},
+    "GMT": {"quantity": 850.0, "leverage": 2, "timeframe": "1h"},
+    "ROSE": {"quantity": 800.0, "leverage": 2, "timeframe": "1h"},
+    "TRUTH": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
+    "SIGN": {"quantity": 550.0, "leverage": 2, "timeframe": "1h"},
     "RARE": {"quantity": 500.0, "leverage": 2, "timeframe": "5m"},
     "GRIFFAIN": {"quantity": 500.0, "leverage": 2, "timeframe": "5m"}
 }
@@ -101,6 +101,12 @@ BASE_URL = "https://api.coindcx.com"
 
 def get_futures_candles(pair, timeframe):
     try:
+        # Map 60m to 1h automatically as CoinDCX expects 1h for hourly candles
+        if timeframe.lower() == "60m":
+            timeframe = "1h"
+        elif timeframe.lower() == "1440m":
+            timeframe = "1d"
+            
         url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval={timeframe}&limit=100"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
@@ -296,7 +302,7 @@ def start_bot():
         t = threading.Thread(target=monitor_coin, args=(coin,))
         t.daemon = True
         t.start()
-        time.sleep(0.5) # Thoda gap diya taaki ek sath saare threads hit na karein
+        time.sleep(0.5)
     
     threading.Thread(target=self_ping, daemon=True).start()
 
