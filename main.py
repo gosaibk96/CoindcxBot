@@ -55,7 +55,7 @@ def dashboard():
     </head>
     <body>
         <h2>🚀 CoinDCX Strategy Dashboard</h2>
-        <p>Running continuously...</p>
+        <p>Running continuously 24/7...</p>
         <table>
             <tr>
                 <th>Coin Name</th>
@@ -274,6 +274,14 @@ def monitor_coin(coin_name):
         
         time.sleep(15)
 
+def self_ping():
+    while True:
+        try:
+            requests.get("https://coindcxbot-ex5v.onrender.com", timeout=5)
+        except Exception:
+            pass
+        time.sleep(120)
+
 def start_bot():
     time.sleep(2)
     for coin in CUSTOM_SETTINGS.keys():
@@ -281,6 +289,9 @@ def start_bot():
         t.daemon = True
         t.start()
         time.sleep(0.3)
+    
+    # Self-ping thread to prevent Render from going to sleep
+    threading.Thread(target=self_ping, daemon=True).start()
 
 if __name__ == "__main__":
     start_bot()
