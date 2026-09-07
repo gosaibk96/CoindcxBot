@@ -114,8 +114,8 @@ def get_futures_candles(pair, timeframe):
                 except Exception:
                     pass
                 return data
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"❌ Candle Error [{pair}]: {e}", flush=True)
     return None
 
 def get_live_futures_price(pair):
@@ -199,7 +199,8 @@ def calculate_supertrend(candles):
         is_red_to_green_flip = (not is_green_pprev) and is_green_prev
         
         return st_val, current_st, is_green_prev, is_red_to_green_flip, closes[-1], closes[idx], timestamps[idx]
-    except Exception:
+    except Exception as e:
+        print(f"❌ Supertrend Error: {e}", flush=True)
         return None, None, False, False, 0.0, 0.0, None
 
 def place_order(pair, side, quantity, leverage):
@@ -220,12 +221,15 @@ def place_order(pair, side, quantity, leverage):
     headers = {'Content-Type': 'application/json', 'X-AUTH-APIKEY': API_KEY, 'X-AUTH-SIGNATURE': signature}
     try:
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
+        print(f"📦 Order Response [{pair} {side}]: {response.status_code} - {response.text}", flush=True)
         return response.status_code == 200
-    except Exception:
+    except Exception as e:
+        print(f"❌ Order Exception [{pair}]: {e}", flush=True)
         return False
 
 def monitor_coin(coin_name):
     pair = f"B-{coin_name}_USDT"
+    print(f"🟢 Started monitoring thread for {coin_name}", flush=True)
     in_position = False
     last_processed_time = None 
     entry_price = 0.0
@@ -245,10 +249,12 @@ def monitor_coin(coin_name):
 
                 if st_val is not None and current_st is not None and candle_time is not None:
                     STATS[coin_name]["status"] = "IN_TRADE" if in_position else "MONITORING"
+                    print(f"⚡ [{coin_name}] Price: {live_price} | ST: {current_st:.4f} | Status: {STATS[coin_name]['status']}", flush=True)
                     
                     if not in_position:
                         if candle_time != last_processed_time:
                             if is_red_to_green_flip:
+                                print(f"🟢 [{coin_name}] Red to Green Flip! Placing BUY order...", flush=True)
                                 if place_order(pair, "buy", config["quantity"], config["leverage"]):
                                     in_position = True
                                     entry_price = live_price
@@ -258,6 +264,7 @@ def monitor_coin(coin_name):
                     
                     elif in_position:
                         if live_price < current_st:
+                            print(f"🔴 [{coin_name}] Price crossed below ST! Placing SELL order...", flush=True)
                             if place_order(pair, "sell", config["quantity"], config["leverage"]):
                                 in_position = False
                                 pnl_delta = live_price - entry_price
@@ -269,8 +276,10 @@ def monitor_coin(coin_name):
                                 STATS[coin_name]["status"] = "MONITORING"
             else:
                 STATS[coin_name]["status"] = "INVALID_PAIR"
-        except Exception:
-            pass
+                print(f"⚠️ [{coin_name}] No candles received.", flush=True)
+        except Exception as e:
+            print(f"❌ Loop Error [{coin_name}]: {e}", flush=True)
+            traceback.print_exc()
         
         time.sleep(15)
 
@@ -290,7 +299,6 @@ def start_bot():
         t.start()
         time.sleep(0.3)
     
-    # Self-ping thread to prevent Render from going to sleep
     threading.Thread(target=self_ping, daemon=True).start()
 
 if __name__ == "__main__":
