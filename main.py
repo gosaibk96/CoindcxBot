@@ -5,13 +5,13 @@ import requests
 import json
 import os
 import threading
+import traceback
 from flask import Flask
 
 app = Flask(__name__)
 
 STATS = {}
 
-# Aapke bataye gaye exact coins, quantity aur leverage
 CUSTOM_SETTINGS = {
     "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "60m"},
     "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "60m"},
@@ -113,8 +113,8 @@ def get_futures_candles(pair, timeframe):
                 except Exception:
                     pass
                 return data
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"❌ Candle Error for {pair}: {e}", flush=True)
     return None
 
 def get_live_futures_price(pair):
@@ -198,7 +198,8 @@ def calculate_supertrend(candles):
         is_red_to_green_flip = (not is_green_pprev) and is_green_prev
         
         return st_val, current_st, is_green_prev, is_red_to_green_flip, closes[-1], closes[idx], timestamps[idx]
-    except Exception:
+    except Exception as e:
+        print(f"❌ Supertrend Calc Error: {e}", flush=True)
         return None, None, False, False, 0.0, 0.0, None
 
 def place_order(pair, side, quantity, leverage):
@@ -220,17 +221,18 @@ def place_order(pair, side, quantity, leverage):
     try:
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
         return response.status_code == 200
-    except Exception:
+    except Exception as e:
+        print(f"❌ Order Error: {e}", flush=True)
         return False
 
 def monitor_coin(coin_name):
     pair = f"B-{coin_name}_USDT"
+    print(f"🟢 Thread started successfully for {coin_name} ({pair})", flush=True)
     in_position = False
     last_processed_time = None 
     entry_price = 0.0
     
-    # Har thread ko alag-alag time par start karne ke liye chhota delay taaki server par load na pde
-    time.sleep(2)
+    time.sleep(3)
     
     while True:
         try:
@@ -271,11 +273,13 @@ def monitor_coin(coin_name):
                                 else:
                                     STATS[coin_name]["losses"] += 1
                                 STATS[coin_name]["status"] = "MONITORING"
+            else:
+                print(f"⚠️ [{coin_name}] No candles received for timeframe {config['timeframe']}", flush=True)
         except Exception as e:
-            print(f"❌ [{coin_name}] Error: {e}", flush=True)
+            print(f"❌ [{coin_name}] Loop Error: {e}", flush=True)
+            traceback.print_exc()
         
-        # Har loop ke baad 10 seconds ka gap taaki logs freeze na ho aur API block na kare
-        time.sleep(10)
+        time.sleep(15)
 
 def self_ping():
     while True:
@@ -286,11 +290,13 @@ def self_ping():
         time.sleep(120)
 
 def start_bot():
-    time.sleep(3)
+    print("🚀 Starting all coin monitoring threads...", flush=True)
+    time.sleep(2)
     for coin in CUSTOM_SETTINGS.keys():
         t = threading.Thread(target=monitor_coin, args=(coin,))
         t.daemon = True
         t.start()
+        time.sleep(0.5) # Thoda gap diya taaki ek sath saare threads hit na karein
     
     threading.Thread(target=self_ping, daemon=True).start()
 
