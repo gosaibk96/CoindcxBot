@@ -13,9 +13,9 @@ app = Flask(__name__)
 STATS = {}
 
 CUSTOM_SETTINGS = {
-    "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "1m"},
-    "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1m"},
-    "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "1m"},
+    "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "1h"},
+    "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
+    "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
     "ZORA": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
     "PEOPLE": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
     "MOVE": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
@@ -27,8 +27,8 @@ CUSTOM_SETTINGS = {
     "ROSE": {"quantity": 800.0, "leverage": 2, "timeframe": "1h"},
     "TRUTH": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
     "SIGN": {"quantity": 550.0, "leverage": 2, "timeframe": "1h"},
-    "RARE": {"quantity": 500.0, "leverage": 2, "timeframe": "5m"},
-    "GRIFFAIN": {"quantity": 500.0, "leverage": 2, "timeframe": "5m"}
+    "RARE": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
+    "GRIFFAIN": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"}
 }
 
 for coin in CUSTOM_SETTINGS.keys():
