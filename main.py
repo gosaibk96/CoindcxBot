@@ -13,9 +13,9 @@ app = Flask(__name__)
 STATS = {}
 
 CUSTOM_SETTINGS = {
-    "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "1h"},
-    "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
-    "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
+    "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "1m"},
+    "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1m"},
+    "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "1m"},
     "ZORA": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
     "PEOPLE": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
     "MOVE": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
