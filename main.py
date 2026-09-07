@@ -12,22 +12,22 @@ app = Flask(__name__)
 STATS = {}
 
 CUSTOM_SETTINGS = {
-    "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "1h"},
-    "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
-    "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
-    "ZORA": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
-    "PEOPLE": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
-    "MOVE": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
-    "CHILLGUY": {"quantity": 400.0, "leverage": 2, "timeframe": "1h"},
-    "BRETT": {"quantity": 1100.0, "leverage": 2, "timeframe": "1h"},
-    "MANTRA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
-    "VET": {"quantity": 900.0, "leverage": 2, "timeframe": "1h"},
-    "GMT": {"quantity": 850.0, "leverage": 2, "timeframe": "1h"},
-    "ROSE": {"quantity": 800.0, "leverage": 2, "timeframe": "1h"},
-    "TRUTH": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
-    "SIGN": {"quantity": 550.0, "leverage": 2, "timeframe": "1h"},
-    "RARE": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
-    "GRIFFAIN": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
+    "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "60m"},
+    "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "60m"},
+    "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "60m"},
+    "ZORA": {"quantity": 750.0, "leverage": 2, "timeframe": "60m"},
+    "PEOPLE": {"quantity": 750.0, "leverage": 2, "timeframe": "60m"},
+    "MOVE": {"quantity": 700.0, "leverage": 2, "timeframe": "60m"},
+    "CHILLGUY": {"quantity": 400.0, "leverage": 2, "timeframe": "60m"},
+    "BRETT": {"quantity": 1100.0, "leverage": 2, "timeframe": "60m"},
+    "MANTRA": {"quantity": 1400.0, "leverage": 2, "timeframe": "60m"},
+    "VET": {"quantity": 900.0, "leverage": 2, "timeframe": "60m"},
+    "GMT": {"quantity": 850.0, "leverage": 2, "timeframe": "60m"},
+    "ROSE": {"quantity": 800.0, "leverage": 2, "timeframe": "60m"},
+    "TRUTH": {"quantity": 500.0, "leverage": 2, "timeframe": "60m"},
+    "SIGN": {"quantity": 550.0, "leverage": 2, "timeframe": "60m"},
+    "RARE": {"quantity": 500.0, "leverage": 2, "timeframe": "5m"},
+    "GRIFFAIN": {"quantity": 500.0, "leverage": 2, "timeframe": "5m"},
    }
 for coin in CUSTOM_SETTINGS.keys():
     STATS[coin] = {
