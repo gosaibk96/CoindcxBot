@@ -101,7 +101,6 @@ BASE_URL = "https://api.coindcx.com"
 
 def get_futures_candles(pair, timeframe):
     try:
-        # Map 60m to 1h automatically as CoinDCX expects 1h for hourly candles
         if timeframe.lower() == "60m":
             timeframe = "1h"
         elif timeframe.lower() == "1440m":
@@ -119,8 +118,8 @@ def get_futures_candles(pair, timeframe):
                 except Exception:
                     pass
                 return data
-    except Exception as e:
-        print(f"❌ Candle Error for {pair}: {e}", flush=True)
+    except Exception:
+        pass
     return None
 
 def get_live_futures_price(pair):
@@ -204,8 +203,7 @@ def calculate_supertrend(candles):
         is_red_to_green_flip = (not is_green_pprev) and is_green_prev
         
         return st_val, current_st, is_green_prev, is_red_to_green_flip, closes[-1], closes[idx], timestamps[idx]
-    except Exception as e:
-        print(f"❌ Supertrend Calc Error: {e}", flush=True)
+    except Exception:
         return None, None, False, False, 0.0, 0.0, None
 
 def place_order(pair, side, quantity, leverage):
@@ -227,13 +225,11 @@ def place_order(pair, side, quantity, leverage):
     try:
         response = requests.post(url, data=json_body, headers=headers, timeout=5)
         return response.status_code == 200
-    except Exception as e:
-        print(f"❌ Order Error: {e}", flush=True)
+    except Exception:
         return False
 
 def monitor_coin(coin_name):
     pair = f"B-{coin_name}_USDT"
-    print(f"🟢 Thread started successfully for {coin_name} ({pair})", flush=True)
     in_position = False
     last_processed_time = None 
     entry_price = 0.0
@@ -280,10 +276,9 @@ def monitor_coin(coin_name):
                                     STATS[coin_name]["losses"] += 1
                                 STATS[coin_name]["status"] = "MONITORING"
             else:
-                print(f"⚠️ [{coin_name}] No candles received for timeframe {config['timeframe']}", flush=True)
-        except Exception as e:
-            print(f"❌ [{coin_name}] Loop Error: {e}", flush=True)
-            traceback.print_exc()
+                STATS[coin_name]["status"] = "INVALID_PAIR"
+        except Exception:
+            pass
         
         time.sleep(15)
 
@@ -296,13 +291,12 @@ def self_ping():
         time.sleep(120)
 
 def start_bot():
-    print("🚀 Starting all coin monitoring threads...", flush=True)
     time.sleep(2)
     for coin in CUSTOM_SETTINGS.keys():
         t = threading.Thread(target=monitor_coin, args=(coin,))
         t.daemon = True
         t.start()
-        time.sleep(0.5)
+        time.sleep(0.3)
     
     threading.Thread(target=self_ping, daemon=True).start()
 
