@@ -14,7 +14,6 @@ STATS = {}
 
 CUSTOM_SETTINGS = {
     "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "1h"},
-    "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "1h"},
     "PENGU": {"quantity": 700.0, "leverage": 2, "timeframe": "1h"},
     "ZORA": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
     "PEOPLE": {"quantity": 750.0, "leverage": 2, "timeframe": "1h"},
@@ -25,10 +24,7 @@ CUSTOM_SETTINGS = {
     "VET": {"quantity": 900.0, "leverage": 2, "timeframe": "1h"},
     "GMT": {"quantity": 850.0, "leverage": 2, "timeframe": "1h"},
     "ROSE": {"quantity": 800.0, "leverage": 2, "timeframe": "1h"},
-    "TRUTH": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
-    "SIGN": {"quantity": 550.0, "leverage": 2, "timeframe": "1h"},
-    "RARE": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"},
-    "GRIFFAIN": {"quantity": 500.0, "leverage": 2, "timeframe": "1h"}
+    "SIGN": {"quantity": 550.0, "leverage": 2, "timeframe": "1h"}
 }
 
 for coin in CUSTOM_SETTINGS.keys():
@@ -58,8 +54,8 @@ def dashboard():
         </style>
     </head>
     <body>
-        <h2>🚀 Strategy Performance Dashboard</h2>
-        <p>Auto-refreshing every 5 seconds...</p>
+        <h2>🚀 CoinDCX Strategy Dashboard</h2>
+        <p>Running continuously...</p>
         <table>
             <tr>
                 <th>Coin Name</th>
@@ -250,12 +246,9 @@ def monitor_coin(coin_name):
                 if st_val is not None and current_st is not None and candle_time is not None:
                     STATS[coin_name]["status"] = "IN_TRADE" if in_position else "MONITORING"
                     
-                    print(f"⚡ [{coin_name}] Price: {live_price} | ST: {current_st:.4f} | Pos: {STATS[coin_name]['status']}", flush=True)
-                    
                     if not in_position:
                         if candle_time != last_processed_time:
                             if is_red_to_green_flip:
-                                print(f"🟢 [{coin_name}] Red to Green Flip! Placing BUY order...", flush=True)
                                 if place_order(pair, "buy", config["quantity"], config["leverage"]):
                                     in_position = True
                                     entry_price = live_price
@@ -265,7 +258,6 @@ def monitor_coin(coin_name):
                     
                     elif in_position:
                         if live_price < current_st:
-                            print(f"🔴 [{coin_name}] Price crossed below ST! Placing SELL order...", flush=True)
                             if place_order(pair, "sell", config["quantity"], config["leverage"]):
                                 in_position = False
                                 pnl_delta = live_price - entry_price
@@ -282,14 +274,6 @@ def monitor_coin(coin_name):
         
         time.sleep(15)
 
-def self_ping():
-    while True:
-        try:
-            requests.get("http://127.0.0.1:10000/", timeout=5)
-        except Exception:
-            pass
-        time.sleep(120)
-
 def start_bot():
     time.sleep(2)
     for coin in CUSTOM_SETTINGS.keys():
@@ -297,10 +281,8 @@ def start_bot():
         t.daemon = True
         t.start()
         time.sleep(0.3)
-    
-    threading.Thread(target=self_ping, daemon=True).start()
 
 if __name__ == "__main__":
-    threading.Thread(target=start_bot, daemon=True).start()
+    start_bot()
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
