@@ -11,6 +11,7 @@ app = Flask(__name__)
 
 STATS = {}
 
+# Aapke bataye gaye exact coins, quantity aur leverage
 CUSTOM_SETTINGS = {
     "PUMP": {"quantity": 1600.0, "leverage": 2, "timeframe": "60m"},
     "TRIA": {"quantity": 1400.0, "leverage": 2, "timeframe": "60m"},
@@ -27,8 +28,9 @@ CUSTOM_SETTINGS = {
     "TRUTH": {"quantity": 500.0, "leverage": 2, "timeframe": "60m"},
     "SIGN": {"quantity": 550.0, "leverage": 2, "timeframe": "60m"},
     "RARE": {"quantity": 500.0, "leverage": 2, "timeframe": "5m"},
-    "GRIFFAIN": {"quantity": 500.0, "leverage": 2, "timeframe": "5m"},
-   }
+    "GRIFFAIN": {"quantity": 500.0, "leverage": 2, "timeframe": "5m"}
+}
+
 for coin in CUSTOM_SETTINGS.keys():
     STATS[coin] = {
         "total_trades": 0, "wins": 0, "losses": 0, "pnl": 0.0,
@@ -100,7 +102,7 @@ BASE_URL = "https://api.coindcx.com"
 def get_futures_candles(pair, timeframe):
     try:
         url = f"https://public.coindcx.com/market_data/candles?pair={pair}&interval={timeframe}&limit=100"
-        response = requests.get(url, timeout=3)
+        response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             if isinstance(data, dict):
@@ -118,7 +120,7 @@ def get_futures_candles(pair, timeframe):
 def get_live_futures_price(pair):
     try:
         url = "https://public.coindcx.com/exchange/ticker"
-        res = requests.get(url, timeout=3)
+        res = requests.get(url, timeout=5)
         if res.status_code == 200:
             for item in res.json():
                 market = item.get('market') or item.get('symbol')
@@ -227,6 +229,9 @@ def monitor_coin(coin_name):
     last_processed_time = None 
     entry_price = 0.0
     
+    # Har thread ko alag-alag time par start karne ke liye chhota delay taaki server par load na pde
+    time.sleep(2)
+    
     while True:
         try:
             config = CUSTOM_SETTINGS[coin_name]
@@ -241,9 +246,8 @@ def monitor_coin(coin_name):
                 if st_val is not None and current_st is not None and candle_time is not None:
                     STATS[coin_name]["status"] = "IN_TRADE" if in_position else "MONITORING"
                     
-                    print(f"⚡ [{coin_name}] Live: {live_price} | ST: {current_st:.4f} | Pos: {STATS[coin_name]['status']}", flush=True)
+                    print(f"⚡ [{coin_name}] Price: {live_price} | ST: {current_st:.4f} | Pos: {STATS[coin_name]['status']}", flush=True)
                     
-                    # ENTRY: Sirf tabhi buy hoga jab Red to Green flip exact naye candle par detect ho
                     if not in_position:
                         if candle_time != last_processed_time:
                             if is_red_to_green_flip:
@@ -255,7 +259,6 @@ def monitor_coin(coin_name):
                                     STATS[coin_name]["status"] = "IN_TRADE"
                             last_processed_time = candle_time
                     
-                    # EXIT: Live price Supertrend ke niche cross kare
                     elif in_position:
                         if live_price < current_st:
                             print(f"🔴 [{coin_name}] Price crossed below ST! Placing SELL order...", flush=True)
@@ -270,7 +273,9 @@ def monitor_coin(coin_name):
                                 STATS[coin_name]["status"] = "MONITORING"
         except Exception as e:
             print(f"❌ [{coin_name}] Error: {e}", flush=True)
-        time.sleep(3)
+        
+        # Har loop ke baad 10 seconds ka gap taaki logs freeze na ho aur API block na kare
+        time.sleep(10)
 
 def self_ping():
     while True:
@@ -281,7 +286,7 @@ def self_ping():
         time.sleep(120)
 
 def start_bot():
-    time.sleep(2)
+    time.sleep(3)
     for coin in CUSTOM_SETTINGS.keys():
         t = threading.Thread(target=monitor_coin, args=(coin,))
         t.daemon = True
